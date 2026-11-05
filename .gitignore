@@ -1,0 +1,49 @@
+# Local settings and credentials
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Host build output and dependency caches
+build/
+bin/
+obj/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Quartus-generated files; keep .qpf, .qsf, .sdc and source/IP definitions
+db/
+incremental_db/
+output_files/
+simulation/
+*.qws
+*.sof
+*.pof
+*.jic
+*.rpt
+*.summary
+
+# Simulator output
+work/
+transcript
+vsim.wlf
+*.vcd
+*.fst
+
+# LaTeX intermediates; keep proposal PDF and source
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Local experiment/download output
+.artifacts/
+downloads/
+results/local/

@@ -1,0 +1,101 @@
+\documentclass[10pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[top=0.6in, bottom=0.55in, left=0.65in, right=0.65in]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small EECS 3216: Digital Systems Engineering}
+\rhead{\small Course Project Proposal}
+\cfoot{\small \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\setlength{\headheight}{13pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+\setlist[itemize]{leftmargin=1.4em, itemsep=0.5pt, topsep=1pt, parsep=0pt}
+\titleformat{\section}{\normalsize\bfseries}{\thesection.}{0.4em}{}
+\titlespacing*{\section}{0pt}{4pt}{2pt}
+
+\newcommand{\proposalheader}[4]{%
+    \noindent\fbox{%
+        \parbox{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}{%
+            \centering
+            {\large\bfseries #1}\\[3pt]
+            \small
+            \textbf{Target Tier:} #2 \hfill \textbf{Course:} EECS 3216 (Fall 2026) \hfill \textbf{Topic:} #3\\[2pt]
+            \raggedright\footnotesize
+            \textbf{Group Members:} #4
+        }%
+    }\par
+    \vspace{2pt}
+}
+
+\begin{document}
+
+\proposalheader{FPGA Tactical Controller for StarCraft II Micro Scenarios}%
+{Tier `A' (100\%)}%
+{Datapath / Control / VGA}%
+{[Student 1 Name] ([ID]), [Student 2 Name] ([ID]), [Student 3 Name] ([ID]), [Student 4 Name] ([ID])}
+
+\section{Overview and Difficulty Justification}
+{\small
+We propose a SystemVerilog controller demonstrated in fixed-army StarCraft II (SC2) scenarios without production. A PC adapter exchanges observations/commands over UART; the FPGA assesses strength, selects advance/attack/retreat/hold behavior, and allocates targets. SC2 renders gameplay on the PC; FPGA VGA shows a simple top-down diagram of colored markers and text. Tier `A' combines original UART, memory coordination, pipelined arithmetic, dependent reservations, interacting FSMs, and video output.
+}
+
+\section{Target Hardware and Peripherals (DE10-Lite Only)}
+{\small
+\begin{itemize}
+    \item \textbf{Onboard Resources (MAX 10 \texttt{10M50DAF484C7G}):} 50\,MHz clock (\texttt{PIN\_P11}); M9K RAM; multipliers; 25.2\,MHz VGA PLL; GPIO UART RX/TX; 4-bit-per-channel VGA; \texttt{KEY0} reset, \texttt{KEY1} step; \texttt{SW4} auto/step, \texttt{SW3:0} unit selection; \texttt{LEDR9:0} status; \texttt{HEX5:0} results/cycles.
+    \item \textbf{External Hardware:} SC2 host PC, 3.3\,V USB-to-UART adapter/common-ground wiring, and VGA monitor/cable (640$\times$480 at 60\,Hz). USB-Blaster programs the FPGA.
+\end{itemize}
+}
+
+\section{Combinational and Sequential Logic Architecture}
+{\small
+\begin{itemize}
+    \item \textbf{Combinational Logic:} Coordinate subtractors, distance/strength multipliers, range/waypoint comparators, reservation arithmetic, minimum selector, checksum adder, and display decoders. Unsigned 16-bit positions/reach have six fractional bits; 17-bit signed differences feed a 35-bit distance-squared sum. Health/damage use 16 bits/four fractional bits; reservations 20 bits, strength sums 36 bits; comparisons are widened.
+    \item \textbf{Sequential Logic and FSMs:} UART synchronizer/RX/TX FSMs; M9K memories; four distance/ranking stages; accumulators; scan/cycle counters; retreat latch; master FSM (\texttt{RECEIVE, VALIDATE, ASSESS, ALLOCATE, REPLY, ERROR}). FSM patterns [1,3] inform \texttt{ADVANCE, ATTACK, RETREAT, HOLD}. Scans drain before reservation writes; computation locks RAM. VGA counters and a frame-boundary handshake synchronize stable display data.
+\end{itemize}
+}
+
+\section{Concrete Specifications and Testable Features}
+{\small
+\begin{itemize}
+    \item \textbf{Protocol:} 115,200-baud UART, 8-N-1, 8-bit additive checksums. Snapshots carry IDs, 0--16 units/side, indices, health/max-health, positions, damage, readiness, and objective/retreat waypoints. Return state, commands, targets/waypoints, and cycles. Reject malformed packets/counts, checksum errors, and 100\,ms inter-byte timeouts; round reset clears history.
+    \item \textbf{Tactical Decisions:} Use $S=\sum_i H_iD_i$ over living units (health $H_i$, damage/attack $D_i$). Retreat at enemy strength $\geq2S_{\rm friendly}$ or health $\leq25\%$ of initial squad maximum; latch retreat until reset, holding at safety. Otherwise attack when ready/in range, wait during cooldown in range, or advance to the objective. Empty squads hold; arrival tolerance is one map unit. Score/cutoffs are experimental parameters.
+    \item \textbf{Target Allocation:} Adapt weakest-target/no-overkill ideas [2]: process ready attackers in index order; rank living in-range targets by positive health after reservations, squared distance, then index. Reserve damage before the next attacker; unassigned attackers hold. Reset reservations per snapshot. Support Marines versus Zerglings on open terrain without upgrades/abilities, with per-attacker damage/reach constant across targets.
+    \item \textbf{SC2 Demo and Benchmarks:} Select/adapt AI Arena micro-map rounds [6] to 4--8 units/side; pin map/client versions and verify spawns, resets, counts, and terrain. Single-step SC2 waits for hardware; the host maps tags and validates commands. Demonstrate approach, allocation, and retreat. Vary starts/health/force balance [4]; compare Attack-Closest [2] and pinned MarineMicroBot [5] with matched scenarios/opponent/step intervals. Record outcomes, survivors, health, game loops, and compute/round-trip latency. VGA shows markers, target/waypoint highlights, and state text; HEX/LEDs show results/cycles/status.
+    \item \textbf{Originality:} HDL, adapter, and tests will be original; algorithms credit [1--3], SDK/example code [5], maps [6]. Only PLL IP is planned; RAM/multipliers are inferred. Pin/timing source: Terasic's DE10-Lite User Manual.
+\end{itemize}
+}
+
+\section{Verification Plan and Team Task Allocation}
+{\small
+\begin{itemize}
+    \item \textbf{Student 1 (UART/Host):} ModelSim protocol/error tests, loopback, SC2 tag/command mapping and round resets.
+    \item \textbf{Student 2 (Datapath):} Check fixed-point limits, thresholds, and ties against an independent reference.
+    \item \textbf{Student 3 (FSMs/Allocation):} Check transitions, retreat persistence, reservations, empty/cooldown cases, and bit-exact results on 1,000 randomized snapshot sequences.
+    \item \textbf{Student 4 (VGA/Integration):} Verify video timing and clock crossings; test maps and benchmarks; report FPGA resources, timing, and gameplay outcomes.
+\end{itemize}
+}
+
+\vspace{2pt}
+{\footnotesize\setlength{\parskip}{0pt}
+\textbf{References}\quad
+[1] I. Millington, AI for Games, 3rd ed., 2019, Sec.\ 5.3, pp.\ 314--317.\par
+[2] D. Churchill and M. Buro, \href{https://davechurchill.ca/publications/pdf/combat13.pdf}{Portfolio Greedy Search and Simulation for Large-Scale Combat in StarCraft}, 2013, Secs.\ II--III.\par
+[3] E. A. Lee and S. A. Seshia, \href{https://ptolemy.berkeley.edu/books/leeseshia/releases/LeeSeshia_DigitalV2_3.pdf}{Introduction to Embedded Systems: A Cyber-Physical Systems Approach}, 2nd ed., 2017, Sec.\ 3.3.\par
+[4] B. Ellis et al., \href{https://arxiv.org/abs/2212.07489v2}{SMACv2: An Improved Benchmark for Cooperative Multi-Agent Reinforcement Learning}, 2023.\par
+[5] Blizzard, \href{https://github.com/Blizzard/s2client-api}{s2client-api}: MarineMicroBot (examples/common/bot\_examples.cc); \href{https://github.com/Blizzard/s2client-proto/blob/master/docs/protocol.md}{SC2 protocol: single-step mode}.\par
+[6] AI Arena, \href{https://aiarena.net/wiki/maps/}{micro-map downloads} and \href{https://github.com/aiarena/micro-ladder-maps}{micro-ladder-maps source}; versions selected after compatibility testing.
+}
+
+\end{document}
