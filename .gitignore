@@ -47,3 +47,10 @@ vsim.wlf
 .artifacts/
 downloads/
 results/local/
+
+# Demo run logs (curated results live in docs/results.md)
+host/logs/
+sim/vsim_*.log
+
+# Course handouts (instructor material; repository is public)
+docs/course/

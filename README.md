@@ -9,22 +9,33 @@ adapter translates observations and commands through the StarCraft II API. SC2
 simulates and renders the game; the FPGA's VGA output is a simple top-down status
 diagram with colored unit markers, target/waypoint highlights, and state text.
 
-## Current status
+## Current status — working demo (November 8, 2026)
 
-**Planning scaffold only.** No HDL, host adapter, working Quartus project, or
-automated simulation suite has been implemented. Map/client compatibility,
-benchmark behavior, resource utilization, timing, and gameplay benefit are
-unverified. This repository does not run SC2 or program a board yet.
+A demonstrator of the narrowed scope ([scoping exploration](docs/scoping-exploration.md))
+runs end to end on our board. The FPGA picks every Marine's target in the SC2
+DefeatRoaches mini-game, and `SW0` switches between two exactly specified rules
+(CLOSEST / FOCUS).
+
+- The RTL passes 1,216 / 1,216 bit-exact cases in Verilator **and over the real UART on the board**.
+- Seeded games driven by the board match the software reference game for game.
+- 15,847 LEs, 4,194 registers, 68 multiplier elements, +4.283 ns slack at 50 MHz.
+
+Not yet shown: the new target lines on the real monitor, and on-board runs with
+`SW0` = FOCUS. See [results](docs/results.md).
+
+The strength estimate, retreat FSM, waypoints and damage reservations described in
+the proposal and [architecture](docs/architecture.md) are **not** in the demo.
 
 ## Start here
 
-- [Current proposal (PDF)](docs/proposal/proposal.pdf)
-- [Editable proposal (LaTeX)](docs/proposal/proposal.tex)
-- [Implementation plan and team responsibilities](docs/implementation-plan.md)
-- [Architecture and draft interface decisions](docs/architecture.md)
-- [Risks and responses](docs/risks.md)
-- [Intended demonstration](docs/demo.md)
-- [Research, SDK, map, and hardware references](docs/references.md)
+- [How the demo works, end to end](docs/how-it-works.md): the explanation for the lab session
+- [Demo runbook](docs/demo.md): `tools/demo.sh preflight | program | check | watch | compare`
+- [Host ↔ FPGA protocol and the exact rule](docs/protocol.md)
+- [Measured results](docs/results.md)
+- [Scoping exploration](docs/scoping-exploration.md)
+- Course instructions, template, and sample proposals: from eClass (keep a local copy in `docs/course/`; not published because this repository is public)
+- [Current proposal (PDF)](docs/proposal/proposal.pdf) and [LaTeX](docs/proposal/proposal.tex)
+- [Implementation plan](docs/implementation-plan.md), [risks](docs/risks.md), [references](docs/references.md)
 - [Contribution workflow](CONTRIBUTING.md)
 
 ## Required scope
@@ -48,10 +59,12 @@ win rate must be measured rather than assumed.
 ## Repository layout
 
 ```text
-rtl/            Planned SystemVerilog modules
-sim/            Planned HDL testbenches and reference-vector exchange
-host/           Planned SC2 adapter and independent software reference
-quartus/        Planned board project, timing constraints, and pin assignments
+rtl/            SystemVerilog: UART, frame parser, target pipeline, reply, VGA, HEX, top
+sim/            Verilator/Questa system testbench, vectors, VGA frame capture
+host/           SC2 game loop, COM bridge, reference model, board checker
+quartus/        DE10-Lite project, pins (from Intel's Golden Top), timing constraints
+tools/          demo.sh, Quartus build/program wrappers, UART pin finder
+explore/        Scoping probes and recorded data
 scenarios/      Scenario definitions, map qualification, and benchmark setup
 docs/           Proposal, implementation plan, architecture, risks, demo, references
 .github/        Issue and pull-request templates

@@ -1,28 +1,18 @@
-# Planned SC2 host and reference model
+# Host (Python, runs in WSL)
 
-No host executable, API dependencies, or reference model are implemented yet.
+| File | Role |
+|---|---|
+| `sc2fpga/protocol.py` | Frame encode/decode (mirrors [protocol.md](../docs/protocol.md)) |
+| `sc2fpga/reference.py` | Independent reference: target rule, cycle count, error rules |
+| `sc2fpga/transport.py` | `win:COM5` (PowerShell bridge), `/dev/ttyUSB0` (pyserial), `model` (reference as fake board) |
+| `bridge/com_bridge.ps1` | Lets WSL use the Windows COM port; no `usbipd` needed |
+| `sc2fpga/winclient.py` | Starts the visible Windows SC2 client from WSL (works around burnysc2's launcher) |
+| `sc2fpga/vectors.py`, `gen_vectors.py` | Test vectors for the testbench and the board |
+| `hw_check.py` | Sends the vectors to the board and compares bit-exactly |
+| `sc2_demo.py` | The SC2 ↔ FPGA game loop |
 
-## Adapter duties
+Setup: `uv venv host/.venv && VIRTUAL_ENV=host/.venv uv pip install -r host/requirements.txt`.
+The usual entry point is `tools/demo.sh` (see [demo.md](../docs/demo.md)).
 
-- Launch/join a qualified map, obtain legal observations, and control stepping.
-- Map native unit tags to stable per-round packet indices.
-- Capture initial squad maximum health and authored waypoints.
-- Convert positions, health, damage estimates, effective reach, and readiness
-  to the agreed fixed-point representation.
-- Exchange framed UART packets; validate reply IDs, status, actors, and targets.
-- Map attack/move/hold intents to native commands without repeated-order damage.
-- Record observations, decisions, submitted commands, outcomes, and latency.
-
-SC2 executes physics and pathfinding. The host must not silently replace a failed
-FPGA reply with an unreported friendly tactical decision.
-
-## Reference and benchmarks
-
-The independent fixed-point reference checks hardware correctness. Attack-Closest
-and a pinned MarineMicroBot policy compare gameplay behavior; they are distinct
-from the correctness oracle. Keep the same opponent and step interval for matched
-policy runs.
-
-The official C++ SDK/example is the initial integration candidate. Final host and
-reference language/tool versions are a milestone-1/2 decision. Add executable
-setup/build/run instructions only after proving that path.
+The host never chooses targets. A missing or invalid reply means no orders for that step,
+and the error is counted in the episode summary.

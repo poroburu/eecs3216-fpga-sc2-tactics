@@ -1,63 +1,102 @@
-# Intended demonstration
+# Demo runbook
 
-Target: approximately eight minutes. This is a planned demonstration, not a record
-of working behavior. SC2 integration is required; an independent reference and
-saved snapshots support verification but do not replace the game loop.
+About 8 minutes. Everything below has been run on our PC and board. Read
+[how-it-works.md](how-it-works.md) first; it is the explanation to give.
 
-## Setup
+## Equipment
 
-- DE10-Lite connected to the host PC through a 3.3 V UART adapter with common ground.
-- SC2 game graphics visible on the PC.
-- FPGA VGA connected to a monitor showing colored unit markers, selected
-  target/waypoint highlights, and tactical-state text.
-- HEX/LEDs show result, cycle, and status information.
-- Frozen supported map/client versions, selected policy revisions, and starting layouts.
-- Single-step game mode; automatic hardware decisions plus a manual step mode
-  for inspecting transitions. Real-time play is optional.
+- A PC with WSL2, Quartus Prime Lite 25.1std, the Linux SC2 4.10 client in `~/StarCraftII`,
+  and the Windows SC2 client.
+- DE10-Lite on the USB-Blaster.
+- FT232R USB-UART adapter (COM5), set to **3.3 V**, wired as:
+  - adapter TXD → `GPIO[0]` (header pin 1)
+  - adapter RXD → `GPIO[1]` (header pin 2)
+  - GND → GND
+- VGA monitor on the DE10-Lite VGA port. **Not yet tried on a real monitor**: only the
+  simulated frame and its 16.8 ms frame period have been checked.
 
-Before a run, confirm round reset, enrolled unit indices, initial maximum health,
-and waypoint locations. Start with the supported Marine-versus-Zergling matchup.
+## 10 minutes before
 
-## 1. Explain the boundary — about one minute
+```bash
+cd <repo>
+tools/demo.sh preflight     # USB-Blaster + 10M50DA, COM5, both SC2 installs, Python env, bitstream
+tools/demo.sh program       # the bitstream is volatile: reprogram after every power-cycle
+tools/demo.sh check         # expect "RESULT PASS 1216/1216" (~20 s)
+```
 
-Show the live game and the schematic VGA display. Explain that SC2 handles
-physics/pathfinding and actual damage; the FPGA selects tactics and targets.
-The host transports facts and validates commands.
+`check` is a dry run, not part of the demo. It pushes about 60 frames a second, so the
+VGA and HEX flicker too fast to follow. Keep its last lines on screen to quote in step 5.
 
-## 2. Approach and engage — about two minutes
+Set `SW0` down (CLOSEST), `SW4..1` all down, and press `KEY0` once.
 
-Start outside weapon range with an objective waypoint near the encounter.
-Show advance transitioning to attack, and inspect at least one returned target.
-Distinguish weapon cooldown from an input/protocol failure.
+If the bitstream is missing, run `tools/demo.sh build` first (about 45 s). If the Python
+environment is missing:
 
-## 3. Target allocation — about two minutes
+```bash
+uv venv host/.venv && VIRTUAL_ENV=host/.venv uv pip install -r host/requirements.txt
+```
 
-Load a qualified starting arrangement with unequal enemy health. Single-step
-the decision and show weakest-remaining-health ranking, deterministic ties where
-applicable, and reservations affecting later attackers. Then resume the fight.
-Explain that reservations represent estimated damage for this snapshot.
+## Script
 
-## 4. Retreat to safety — about two minutes
+### 1. The boundary (1 min)
 
-Use a starting force/health disadvantage that triggers the defined threshold.
-Show RETREAT, a move toward the authored safe waypoint, and holding at arrival.
-Show reset clearing retreat history for the next round.
+Show the board, the adapter wires, and the VGA monitor.
 
-## 5. Results and repeatability — about one minute
+> "SC2 simulates the fight. The PC only translates. The FPGA decides which enemy each
+> Marine shoots. `SW0` chooses between two exactly specified rules."
 
-Reset a scenario and explain the matched comparison against Attack-Closest and
-the selected MarineMicroBot policy. Present the recorded outcomes, surviving
-health, game loops, core cycles, serial round-trip latency, and Quartus reports.
+Open [protocol.md](protocol.md) at "The rule" and point at the four-line key definition.
 
-## Evidence to retain
+### 2. Live game, CLOSEST (2.5 min)
 
-- Map/client/API/policy versions, map hash, starting arrangement, opponent,
-  seed where supported, and decision interval.
-- Input snapshots, returned assignments, submitted actions, and error outcomes.
-- Outcomes, survivors, remaining health, game loops, and timing measurements.
-- Reference comparisons, simulation results, and Quartus utilization/timing.
-- All failed or invalid attempts, with reasons, rather than only successful fights.
+```bash
+tools/demo.sh watch          # visible SC2 window at normal speed; Ctrl-C to stop early
+```
 
-Success is correct, visible, repeatable FPGA control in the supported scenarios.
-A particular win rate or speedup is an experimental result, not a prerequisite
-invented from the demonstration's appearance.
+- The terminal prints every decision: Roach HP → the FPGA's target list, round-trip time,
+  and FPGA clock cycles.
+- On VGA, the banner is cyan. Each Marine has a dimmed line to the Roach it is shooting,
+  and the lines fan out across several Roaches. `LEDR9..4` shows several distinct targets.
+- Use `SW4..1` to pick a Marine; `HEX0` shows its current target.
+
+### 3. Flip SW0 to FOCUS during the game (2.5 min)
+
+- `HEX3` changes `C` → `F` and the banner turns orange.
+- The lines from Marines in range swing onto the weakest Roach, and the `LEDR` bar shrinks.
+- The terminal's policy column changes to `FOCUS`. No software was touched.
+
+> "Same game, same PC code. The only change is one switch on the FPGA."
+
+### 4. Matched comparison (1 min)
+
+Real-time games are not repeatable, so the fair comparison uses fixed seeds in step mode:
+
+```bash
+tools/demo.sh compare 5      # headless, ~7 s per game, uses the current SW0
+```
+
+Run it once with `SW0` down and once up. The reference numbers over seeds 1–10 are
+CLOSEST 32.1 and FOCUS 62.4 ([results.md](results.md)). Five games give a smaller sample.
+
+### 5. Verification, resources, and the dry run (1 min)
+
+Say what the dry run proved: 1,216 frames over the real UART, every byte matching the
+independent reference, in both Verilator and Questa. Then point at the Quartus figures in
+[results.md](results.md): 15,847 LEs, 4,194 registers, 68 embedded 9-bit multiplier
+elements, +4.283 ns setup slack at 50 MHz.
+
+## If something fails
+
+| Symptom | Do |
+|---|---|
+| `check` fails with link errors | Check the three adapter wires and the 3.3 V jumper, then reprogram |
+| Everything on HEX is dark | The board was power-cycled: run `tools/demo.sh program` |
+| SC2 window never opens | `powershell.exe "Get-Process SC2_x64 \| Stop-Process"`, then retry. Headless still works: `host/.venv/bin/python host/sc2_demo.py --port win:COM5` |
+| No board at all | `tools/demo.sh model 1` runs the same game with the Python reference. Say clearly that this is the software reference, not the FPGA. |
+
+## Not yet demonstrated
+
+- The target lines on the real monitor. The markers and banner were seen working on November 8.
+- `hw_check` with `SW0` up. Only CLOSEST has been checked on the board, because the
+  switch has to be flipped by hand. FOCUS cases (directed, SC2 traces, and about half the random set) pass in simulation.
+- A full game where `SW0` is flipped partway through.

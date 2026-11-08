@@ -1,5 +1,9 @@
 # Architecture and draft decisions
 
+> **Demo status (November 8, 2026):** the working demo implements the narrower contract in
+> [protocol.md](protocol.md) (target selection only). The strength, retreat and reservation
+> design below is the original proposal and is not implemented.
+
 Status: design intent. No modules or packet layout are implemented.
 
 ## Responsibilities
