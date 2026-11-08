@@ -1,6 +1,7 @@
 # Implementation plan
 
-Status: proposed schedule, November 5, 2026. Implementation has not started.
+Status: proposed schedule, November 5, 2026; UART/protocol work started November 8.
+See [verification](verification.md) for current evidence and remaining work.
 The [proposal](proposal/proposal.pdf) defines the intended assessed scope;
 instructor approval is pending.
 
@@ -35,7 +36,8 @@ working benchmark is established by this scaffold.
 
 Acceptance: producer and consumer owners agree the contract; reference cases
 cover ties, boundaries, empty inputs, cooldown, retreat, and round reset.
-The detailed wire layout remains a design decision, not a frozen interface.
+The [v1 wire contract](protocol.md) and byte fixtures are implemented;
+producer/consumer sign-off and tactical reference work remain pending.
 
 ## Milestone 3 — FPGA core, November 14–20
 

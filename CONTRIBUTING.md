@@ -1,9 +1,9 @@
 # Working together
 
 Start with the [implementation plan](docs/implementation-plan.md) and
-[architecture](docs/architecture.md). There is no implementation to build yet;
-the first milestone is a working software-controlled SC2 scenario and a tested
-map/client/API combination.
+[architecture](docs/architecture.md). The UART/protocol components have executable
+tests; see [sim](sim/README.md). A qualified software-controlled SC2 scenario and
+map/client/API combination are still required.
 
 ## Small, reviewable changes
 

@@ -1,0 +1,12 @@
+{
+  "quartus/uart_diagnostic.sv": "2075a10e680e44eb4f411f92b39a53203929a62923a1516ac0fa4be77a527b6d",
+  "quartus/uart_diagnostic.qsf": "875321f8ac6c6e6b066471b5880c2881bbeae4904879af8d6f4f66a405adfeea",
+  "quartus/uart_diagnostic.sdc": "caee270cdcaaaa78cc50047f4bae431a1579ef3872d87769c9d0cca2fb8931a9",
+  "quartus/uart_diagnostic.qpf": "e65d6a3b31d476737a7836d974e629a48004f89bfee432c487dee6000f803d17",
+  "rtl/uart_rx.sv": "e5d59588264476a4efa0f1d943b67cc551218612a160230708d210c6ed8df69c",
+  "rtl/uart_tx.sv": "03e336dbfeb1e6ae99ea2989205a2168668c11c5631ebacea59283569806fdbb",
+  "rtl/packet_rx.sv": "699b05e7d74e66d0e1a594c60b0af9d341f5ca0cb08a33b44752f0848a65d33e",
+  "rtl/packet_tx.sv": "237325ba08e4d550b6a598cfad5b736fc9e142def9ee1c95679383f6773a2731",
+  "host/test_frames.ps1": "92cf48edac17a8f287a4da6e28761c8b0b880024f2ac2a4dc440563055630c37",
+  "sim/fixtures/protocol.json": "b0f3f4409093f4e2b88e8e9e6e6c0f62b051d951bf9352b16a5210aa7af5234a"
+}

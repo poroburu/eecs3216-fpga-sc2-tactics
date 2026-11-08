@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-08",
+  "os": "Windows 11 Pro",
+  "os_version": "10.0.26300",
+  "port": "COM5",
+  "baud": 115200,
+  "data_bits": 8,
+  "parity": "none",
+  "stop_bits": 1,
+  "flow_control": "none",
+  "ftdi_vcp_driver": "2.12.36.20",
+  "usb_blaster_driver": "2.12.28.0",
+  "ftdi_latency_timer_ms": 16,
+  "gpio_loopback": {
+    "bytes": 25600,
+    "blocks": 100,
+    "elapsed_s": 3.73,
+    "passed": true
+  },
+  "adapter_reconnect": "user unplugged/replugged, followed by 21 passing hardware frame cases",
+  "adapter_only_loopback": "not performed; redundant isolation step superseded by tested complete path",
+  "restore_uart_text": "SENT over COM5: clear + 'UARTon'; all 7 echoed bytes matched at 115200 8-N-1.",
+  "configuration_flash_modified": false
+}

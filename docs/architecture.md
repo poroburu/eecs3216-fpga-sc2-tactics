@@ -1,6 +1,7 @@
 # Architecture and draft decisions
 
-Status: design intent. No modules or packet layout are implemented.
+Status: tactical design intent; UART/packet components are implemented.
+The [v1 protocol](protocol.md) is the canonical wire/numeric contract.
 
 ## Responsibilities
 
@@ -69,26 +70,15 @@ next snapshot; they are not an in-flight projectile/impact ledger.
 - Transfer coherent, completed display snapshots across clock domains with a
   handshake. Do not synchronize a changing multi-bit record one bit at a time.
 
-## Draft host/FPGA contract
+## Host/FPGA contract
 
-UART starts at 115,200 baud, 8-N-1. Frames will include a length and 8-bit additive
-checksum. Reject invalid records/counts/checksums and a 100 ms inter-byte timeout.
+The [v1 contract](protocol.md) specifies framing, checksum, fields, numeric
+bounds, commands, IDs, reset, retries and timeout behavior. See
+[verification](verification.md) for tested components and integration gaps.
 
-Inputs include round/snapshot IDs, stable unit indices, health/max-health,
-positions, damage estimates, friendly readiness, and objective/retreat waypoints.
-Outputs include matching IDs, status, squad state, per-unit attack/move/hold
-intent, target index or waypoint, and computation cycles.
-
-Before implementation, settle:
-
-- Exact wire encoding, endianness, field widths, and checksum coverage.
-- Reset/start handshake, retry behavior, timeouts, and complete-frame commit.
-- Bounds, fixed-point rounding, overflow policy, zero-damage handling, and range tests.
-- Unit index/tag lifetime and round detection; use observed round boundaries.
-- Initial maximum-health capture and behavior after board reset mid-round.
-- HOLD semantics and order deduplication. Do not equate HOLD with repeatedly
-  issuing SC2 HoldPosition or cancelling an attack; validate the native mapping.
-- Result freshness and validation; explicit failure behavior rather than a
-  silent software replacement for faulty FPGA decisions.
-
-Keep this document aligned with the eventual executable contract and fixtures.
+Before merging dependent implementations, obtain producer/consumer sign-off.
+The session cache and tactical core must implement START, stale/duplicate IDs,
+constant initial-health history and retreat persistence behind the packet
+interface. Map/client qualification must establish observed round boundaries,
+authored coordinates, effective reach/radii and native HOLD/order semantics.
+The PC must fail explicitly on invalid hardware replies, never substitute tactics.

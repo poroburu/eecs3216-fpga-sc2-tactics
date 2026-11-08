@@ -1,0 +1,10 @@
+name: Host and UART verification
+on: [push, pull_request]
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s sim -p 'test_*.py' -v
+      - run: sudo apt-get update && sudo apt-get install -y iverilog
+      - run: python3 sim/run_rtl.py

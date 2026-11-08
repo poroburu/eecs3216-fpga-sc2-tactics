@@ -11,17 +11,23 @@ diagram with colored unit markers, target/waypoint highlights, and state text.
 
 ## Current status
 
-**Planning scaffold only.** No HDL, host adapter, working Quartus project, or
-automated simulation suite has been implemented. Map/client compatibility,
-benchmark behavior, resource utilization, timing, and gameplay benefit are
-unverified. This repository does not run SC2 or program a board yet.
+**UART/protocol implementation and hardware bring-up.** A v1 wire contract,
+Python codec/transport, stable-tag/action bridge, custom UART RX/TX, atomic
+packet ingestion, simulations and Quartus diagnostic project are implemented.
+See [verification](docs/verification.md) for measured evidence and remaining work.
+The tactical core, VGA and qualified live SC2 backend remain pending. The
+diagnostic explicitly returns UNSUPPORTED for tactical requests; no gameplay
+benefit or complete controller is established.
 
 ## Start here
 
 - [Current proposal (PDF)](docs/proposal/proposal.pdf)
 - [Editable proposal (LaTeX)](docs/proposal/proposal.tex)
 - [Implementation plan and team responsibilities](docs/implementation-plan.md)
-- [Architecture and draft interface decisions](docs/architecture.md)
+- [Architecture and interface decisions](docs/architecture.md)
+- [Canonical UART protocol](docs/protocol.md)
+- [Wiring and hardware test commands](docs/uart-bringup.md)
+- [Verification and issue status](docs/verification.md)
 - [Risks and responses](docs/risks.md)
 - [Intended demonstration](docs/demo.md)
 - [Research, SDK, map, and hardware references](docs/references.md)
@@ -48,18 +54,18 @@ win rate must be measured rather than assumed.
 ## Repository layout
 
 ```text
-rtl/            Planned SystemVerilog modules
-sim/            Planned HDL testbenches and reference-vector exchange
-host/           Planned SC2 adapter and independent software reference
-quartus/        Planned board project, timing constraints, and pin assignments
+rtl/            UART RX/TX and packet ingestion/serialization
+sim/            Host/HDL tests and independent byte fixtures
+host/           Python transport and SC2 integration boundary
+quartus/        DE10-Lite diagnostic and bring-up projects
 scenarios/      Scenario definitions, map qualification, and benchmark setup
 docs/           Proposal, implementation plan, architecture, risks, demo, references
 .github/        Issue and pull-request templates
 ```
 
-The component READMEs describe planned work; they are not build instructions for
-an existing implementation. Add actual commands and selected tool versions when
-each component becomes executable.
+Run `python3 -m unittest discover -s sim -p 'test_*.py' -v` and, with Icarus
+Verilog 12 installed, `python3 sim/run_rtl.py`. See component READMEs for hardware
+commands and the distinction between diagnostics and the planned tactical core.
 
 ## Course milestones
 

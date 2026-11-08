@@ -45,8 +45,9 @@ to test. These exact choices are not validated by the works above.
   later comparator with combat micro-controllers. It requires qualification and
   adaptation for fixed-army scenarios; it is not a required benchmark yet.
 
-Preserve upstream notices when reusing source. API/library and implementation
-language revisions remain to be selected after the first smoke test.
+Preserve upstream notices when reusing source. The initial UART host uses
+Python 3.12 and pySerial 3.5; the SC2 API/library binding and comparator
+revisions still require a qualified smoke test.
 
 ## Maps
 
