@@ -27,6 +27,7 @@ benefit or complete controller is established.
 - [Architecture and interface decisions](docs/architecture.md)
 - [Canonical UART protocol](docs/protocol.md)
 - [Wiring and hardware test commands](docs/uart-bringup.md)
+- [Linux headless SC2 and pinned C++ API](docs/sc2-linux.md)
 - [Verification and issue status](docs/verification.md)
 - [Risks and responses](docs/risks.md)
 - [Intended demonstration](docs/demo.md)
@@ -59,6 +60,7 @@ sim/            Host/HDL tests and independent byte fixtures
 host/           Python transport and SC2 integration boundary
 quartus/        DE10-Lite diagnostic and bring-up projects
 scenarios/      Scenario definitions, map qualification, and benchmark setup
+third_party/   Pinned Blizzard s2client-api submodule and its dependencies
 docs/           Proposal, implementation plan, architecture, risks, demo, references
 .github/        Issue and pull-request templates
 ```
@@ -84,5 +86,6 @@ scenario evaluation. Credit reused algorithms, SDK/example code, maps, and IP
 separately; see [references](docs/references.md). Download game clients, maps, and
 SDK dependencies through their upstream distribution channels.
 
-A license for the team's original code has not been selected. No third-party
-source or game assets are vendored in this scaffold.
+A license for the team's original code has not been selected. The pinned SC2 API
+submodule retains upstream licenses and history. Game binaries/data and maps
+remain external installations; do not commit them to this repository.

@@ -33,6 +33,15 @@
   comparison or independently measured wire timing has been performed.
 - Windows SC2 installation contains **Base97563** and **Simple64.SC2Map**.
   Presence is not proof of a qualified scenario, live API control or legal action.
+- WSL also has the Linux **4.10.0 / Base75689** client at `~/StarCraftII`.
+  The pinned Blizzard C++ SDK and `host/sc2` target build with CMake 3.28.3/GCC 13.
+  A real headless smoke check successfully launches, pings, creates/joins
+  `BelShirVestigeLE.SC2Map`, validates **13 visible self units** via raw
+  observations and advances exactly **0 → 8 game loops** with eight one-loop
+  steps. No game orders or FPGA exchanges are issued. The legacy SDK's converted
+  unit list incorrectly reports zero due to `CloakedUnknown` handling; see
+  [Linux setup and limitation](sc2-linux.md) and
+  [retained environment/result](evidence/sc2-linux-smoke.json).
 
 The earlier UART-driven HEX design was restored after framed testing. Flash was
 not modified. See [bring-up](uart-bringup.md) for sources, wiring and commands.
@@ -92,6 +101,11 @@ a successful hardware decision; retain true decision latency/cycle/CPU/throughpu
 results across capacity and supported FTDI timer settings. The synthetic benchmark
 intentionally fails on the present UNSUPPORTED endpoint. No gameplay run, speedup,
 win rate or successful SC2 decision is claimed.
+
+The Linux runtime/API launch/observe/step smoke check above now establishes that
+headless infrastructure is available. It does not qualify the tactical scenario
+or a hardware-driven native action. The SDK build is also checked by CI without
+requiring game binaries; live smoke testing uses the external WSL installation.
 
 ## Re-run
 

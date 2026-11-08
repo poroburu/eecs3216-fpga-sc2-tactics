@@ -37,6 +37,12 @@ FTDI timer was read without modification.
 `apply`, `step`. Supply only eligible visible unit facts, with authored damage
 and effective reach for the supported matchup. `apply` revalidates live tags and
 raises on native action failure before the game advances. Start with the complete
-initial squad at an observed round boundary. This repository does not launch SC2
-yet; mocks establish sequencing, not legal SC2 actions or map compatibility.
-The independent tactical reference and actual API binding remain required.
+initial squad at an observed round boundary. The Python bridge does not launch
+SC2; its mocks establish sequencing, not legal SC2 actions or map compatibility.
+The independent tactical reference and actual tactical API binding remain required.
+
+The [C++ API submodule and Linux smoke check](../docs/sc2-linux.md) provide a
+bounded launch/observe/single-step test against the installed headless client.
+Build that optional target with `cmake -S host/sc2 -B build/sc2` and
+`cmake --build build/sc2 --target sc2_smoke -j 4`. It is separate from the Python
+UART transport and does not issue a hardware-derived game action.

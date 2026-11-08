@@ -8,3 +8,12 @@ jobs:
       - run: python3 -m unittest discover -s sim -p 'test_*.py' -v
       - run: sudo apt-get update && sudo apt-get install -y iverilog
       - run: python3 sim/run_rtl.py
+  sc2-sdk-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - run: sudo apt-get update && sudo apt-get install -y cmake g++ make
+      - run: /usr/bin/cmake -S host/sc2 -B build/sc2 -DCMAKE_BUILD_TYPE=Release
+      - run: /usr/bin/cmake --build build/sc2 --target sc2_smoke -j 4

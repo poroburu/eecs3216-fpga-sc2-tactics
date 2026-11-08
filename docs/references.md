@@ -34,7 +34,9 @@ to test. These exact choices are not validated by the works above.
 ## SC2 host and comparator
 
 - [Blizzard s2client-api](https://github.com/Blizzard/s2client-api): C++ API and
-  examples. The SDK is third-party code, not an original HDL contribution.
+  examples, now pinned as `third_party/s2client-api`. The SDK is third-party code,
+  not an original HDL contribution. See [Linux setup](sc2-linux.md) for revision,
+  upstream headless download links and the executable smoke check.
 - [MarineMicroBot source](https://github.com/Blizzard/s2client-api/blob/master/examples/common/bot_examples.cc):
   first named open-source comparison policy for Marines versus Zerglings.
   Pin the revision and document any scenario/host adaptation. This is a small
@@ -72,5 +74,6 @@ Map assets are external work, not part of the group's originality claim.
 
 Credit algorithms, copied/adapted code, generated IP, and maps separately.
 Original hardware implementation does not imply the underlying algorithm is new.
-The repository currently contains planning documents and the group's draft
-proposal, not redistributed game clients, SDK trees, or textbook chapters.
+The repository contains original implementation/planning documents and a pinned
+upstream SDK submodule. Game clients/data, external maps and textbook chapters
+are not redistributed in this project.
