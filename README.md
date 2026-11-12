@@ -13,8 +13,10 @@ the returned orders. SC2 handles movement, pathing and combat.
 The working FPGA-in-the-loop demo is included in this checkout. Start with
 [how it works](docs/how-it-works.md) and the [executable runbook](docs/demo-runbook.md):
 `tools/demo.sh preflight | program | check | watch | compare`.
-[Recorded results](docs/results.md) describe the November 8 baseline; board FOCUS
-comparison evidence remains outstanding.
+[Recorded results](docs/results.md) describe the November 8 baseline. The
+[November 12 operating runbook](docs/runbook.md) records the tested custom
+Windows/WSL launch, Linux operation, and 1,216 passing board FOCUS cases. Matched
+board FOCUS comparison evidence remains outstanding.
 
 The project lead reports provisional TA approval of the demo and completed the
 implementation to date. The updated draft preserves the working comparison and

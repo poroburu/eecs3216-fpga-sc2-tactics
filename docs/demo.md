@@ -4,6 +4,8 @@ Updated proposal presentation, November 12, 2026. Target: eight minutes.
 The working demo commands are in the [executable runbook](demo-runbook.md)
 and `tools/demo.sh`. This document scopes the updated presentation;
 it is not a claim that the proposed strength/FSM/freeze features already run.
+For the November 12 machine setup, custom Windows paths, and Linux commands,
+use the [operating runbook](runbook.md).
 
 ## Setup and rehearsal checklist
 

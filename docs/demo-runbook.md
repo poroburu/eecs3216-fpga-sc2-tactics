@@ -4,7 +4,9 @@ Baseline commands retained from PR #6 (November 8, 2026). Read
 [how-it-works.md](how-it-works.md) first. The updated eight-minute presentation is
 in [demo.md](demo.md); planned features there are separate from these commands.
 See [results](results.md) and the unverified items below before making claims
-about board FOCUS or physical target-line evidence.
+about board FOCUS or physical target-line evidence. For the commands tested on
+porotome on November 12, including its custom Windows SC2 path and Linux operation,
+use the [operating runbook](runbook.md).
 
 ## Equipment
 
@@ -15,8 +17,8 @@ about board FOCUS or physical target-line evidence.
   - adapter TXD → `GPIO[0]` (header pin 1)
   - adapter RXD → `GPIO[1]` (header pin 2)
   - GND → GND
-- VGA monitor on the DE10-Lite VGA port. **Not yet tried on a real monitor**: only the
-  simulated frame and its 16.8 ms frame period have been checked.
+- VGA monitor on the DE10-Lite VGA port. A monitor was connected in the November 12
+  session; the target-line appearance was not independently captured or verified.
 
 ## 10 minutes before
 
@@ -97,9 +99,11 @@ elements, +4.283 ns setup slack at 50 MHz.
 | SC2 window never opens | `powershell.exe "Get-Process SC2_x64 \| Stop-Process"`, then retry. Headless still works: `host/.venv/bin/python host/sc2_demo.py --port win:COM5` |
 | No board at all | `tools/demo.sh model 1` runs the same game with the Python reference. Say clearly that this is the software reference, not the FPGA. |
 
-## Not yet demonstrated
+## Verification updates
 
-- The target lines on the real monitor. The markers and banner were seen working on November 8.
-- `hw_check` with `SW0` up. Only CLOSEST has been checked on the board, because the
-  switch has to be flipped by hand. FOCUS cases (directed, SC2 traces, and about half the random set) pass in simulation.
-- A full game where `SW0` is flipped partway through.
+- On November 12, `hw_check` with SW0 up (FOCUS) passed all 1,216 cases on the board.
+- The live log captured a CLOSEST to FOCUS switch during a round. Six visible
+  Windows rounds completed with zero link errors; a later round disconnected.
+- The target lines on the physical monitor still need an independently recorded
+  visual check. See the [operating runbook](runbook.md#results-from-november-12)
+  for the session's results and limitations.
