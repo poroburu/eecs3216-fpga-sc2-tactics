@@ -1,63 +1,105 @@
-# Intended demonstration
+# Demo plan: make the decision visible
 
-Target: approximately eight minutes. This is a planned demonstration, not a record
-of working behavior. SC2 integration is required; an independent reference and
-saved snapshots support verification but do not replace the game loop.
+Updated proposal presentation, November 12, 2026. Target: eight minutes.
+The working demo and executable runbook are in
+[PR #6](https://github.com/poroburu/eecs3216-fpga-sc2-tactics/pull/6)
+(`docs/demo.md`, `tools/demo.sh`). This document scopes the updated presentation;
+it is not a claim that the proposed strength/FSM/freeze features already run.
 
-## Setup
+## Setup and rehearsal checklist
 
-- DE10-Lite connected to the host PC through a 3.3 V UART adapter with common ground.
-- SC2 game graphics visible on the PC.
-- FPGA VGA connected to a monitor showing colored unit markers, selected
-  target/waypoint highlights, and tactical-state text.
-- HEX/LEDs show result, cycle, and status information.
-- Frozen supported map/client versions, selected policy revisions, and starting layouts.
-- Single-step game mode; automatic hardware decisions plus a manual step mode
-  for inspecting transitions. Real-time play is optional.
+Demo partner operates the checklist; lead handles faults and technical questions.
+Connect the DE10-Lite, verified 3.3 V USB/UART wiring and ground, USB-Blaster,
+SC2 host and VGA monitor. Use the actual tested client/map/build and preserve
+their versions/hashes. Show game and FPGA VGA side by side.
 
-Before a run, confirm round reset, enrolled unit indices, initial maximum health,
-and waypoint locations. Start with the supported Marine-versus-Zergling matchup.
+Run baseline preflight/check first; repeat the board checker with each `SW0`
+setting and retain logs. Prepare one recorded real snapshot that gives different
+CLOSEST/FOCUS targets. Use a tested replay command for inspection, not a newly
+invented button assignment. Resume/restart a live game after inspection.
+PR #6 assigns `KEY0` reset, `KEY1` clear errors, `SW4:1` selected Marine;
+do not promise a manual-step button without implementing and documenting it.
 
-## 1. Explain the boundary — about one minute
+Prepare a matched seed for the reported defeat-to-victory comparison and a few
+additional starts; label native result separately from mini-game score. Reset
+between outcome comparisons. A mid-fight toggle shows immediate behavior, but
+does not by itself establish a matched causal outcome comparison.
 
-Show the live game and the schematic VGA display. Explain that SC2 handles
-physics/pathfinding and actual damage; the FPGA selects tactics and targets.
-The host transports facts and validates commands.
+## 0:00–0:50 — the loop, in ordinary language
 
-## 2. Approach and engage — about two minutes
+Use the [adapted CPS diagram](architecture.md):
+“The game is our simulated plant. The PC measures positions and health, sends
+them over UART, and applies the FPGA's answer. The board decides which enemy to
+attack; the next game state feeds back into the next decision.”
 
-Start outside weapon range with an objective waypoint near the encounter.
-Show advance transitioning to attack, and inspect at least one returned target.
-Distinguish weapon cooldown from an input/protocol failure.
+Explain Marines as friendly units and Roaches as enemy units. SC2 handles motion,
+combat and enemy waves; the PC does not choose friendly targets. Some built-in
+auto-targeting is possible between FPGA decisions.
 
-## 3. Target allocation — about two minutes
+## 0:50–3:10 — same situation, different targeting
 
-Load a qualified starting arrangement with unequal enemy health. Single-step
-the decision and show weakest-remaining-health ranking, deterministic ties where
-applicable, and reservations affecting later attackers. Then resume the fight.
-Explain that reservations represent estimated damage for this snapshot.
+Run CLOSEST from the selected start. Ask the audience to watch target lines and
+enemy health. Reset the same start, change the physical switch to FOCUS and run
+again. Show the reported turnaround if reproduced; otherwise show measured
+score/survivor differences without calling a score a victory.
 
-## 4. Retreat to safety — about two minutes
+Explain: “Finishing one enemy removes one source of damage. Spreading hits can
+leave several enemies alive and firing.” FOCUS means weakest **in each unit's
+range**, otherwise nearest; it is not a global lock onto one enemy.
 
-Use a starting force/health disadvantage that triggers the defined threshold.
-Show RETREAT, a move toward the authored safe waypoint, and holding at arrival.
-Show reset clearing retreat history for the next round.
+## 3:10–4:30 — stop on one hardware decision
 
-## 5. Results and repeatability — about one minute
+Replay the prepared snapshot unchanged under both switches. Select one Marine
+and show policy, snapshot ID, target ID/HP, range status and squared distance.
+Show subtract → square/sum → compare/min. VGA target lines make the output
+readable without understanding SC2 tactics.
 
-Reset a scenario and explain the matched comparison against Attack-Closest and
-the selected MarineMicroBot policy. Present the recorded outcomes, surviving
-health, game loops, core cycles, serial round-trip latency, and Quartus reports.
+Explain the difference between target policy and state: “This changes whom we
+attack. It does not yet say whether the squad should attack or retreat.” Keep
+the transport FSM (IDLE/COMPUTE/REPLY/ERROR) distinct from tactical behavior.
+
+## 4:30–6:00 — why the proposed tactical state changes
+
+Only show live retreat once the extension gate has passed. Start with a clear
+advantage, then a qualified disadvantage/low-HP case. Show `PF`, `PE`, threshold
+reason and `ATTACK → RETREAT → HOLD at safety`. Show explicit encounter reset
+clearing the latch. Use boundary snapshot replay to expose the exact comparison.
+
+“The square-law strength estimate values keeping more weapons alive. It is a
+small approximation, not a guaranteed prediction. The FPGA uses a specified
+comparison to decide whether to keep fighting or preserve units.”
+
+Judge this scene by units/HP preserved or survival time. A retreat can forfeit
+the wave objective. If only bars exist, label them advisory and explain that
+they are not controlling SC2; obtain course approval for any assessed-scope change.
+
+## 6:00–7:15 — the FPGA contribution
+
+- Show VGA continuing while UART receives/returns decisions.
+- Show measured cycle count and link latency separately. PR #6 reports max
+  258 clocks / 5.16 µs core versus 15.9 ms median round trip; replace with current
+  build results after adding logic. Serial/USB dominates end-to-end latency.
+- Inject a known bad-checksum frame with the test tool; point to the error and
+  unchanged good snapshot, then send a valid frame to show recovery.
+- Present the current Quartus timing/resource summary and independent reference
+  check results. Explain predictable pipelined computation and concurrent I/O,
+  not a claim that Python cannot compute these rules or that FPGA causes victory.
+
+## 7:15–8:00 — evidence and roles
+
+Show a compact table of matched starts/policies/results, board versus reference,
+invalid/truncated runs and measurement definitions. Identify the lead's existing
+implementation and each partner's delivered development/report/demo work.
+
+Be ready for “Why FPGA?”: “This is a bounded hardware controller with custom
+communication, a pipelined datapath, explicit control and continuous video output.
+The game makes its decisions visible. We measure core predictability and verify
+its outputs; we do not claim end-to-end CPU acceleration.”
 
 ## Evidence to retain
 
-- Map/client/API/policy versions, map hash, starting arrangement, opponent,
-  seed where supported, and decision interval.
-- Input snapshots, returned assignments, submitted actions, and error outcomes.
-- Outcomes, survivors, remaining health, game loops, and timing measurements.
-- Reference comparisons, simulation results, and Quartus utilization/timing.
-- All failed or invalid attempts, with reasons, rather than only successful fights.
-
-Success is correct, visible, repeatable FPGA control in the supported scenarios.
-A particular win rate or speedup is an experimental result, not a prerequisite
-invented from the demonstration's appearance.
+Source/bitstream/map hashes; client/API/tool versions; mode, seed and decision
+interval; switch trace; raw observations/results; errors/truncation; native result
+and score; survivors/HP; core cycles; end-to-end timing; Quartus setup/hold/resource
+reports; each partner's handoff. Keep labeled logs/replays/video for support if a
+live service fails, while preserving the live hardware/SC2 requirement.

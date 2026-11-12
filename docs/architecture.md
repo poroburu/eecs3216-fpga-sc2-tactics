@@ -1,94 +1,103 @@
-# Architecture and draft decisions
+# Architecture: feedback control demonstrated in SC2
 
-Status: design intent. No modules or packet layout are implemented.
+Updated November 12, 2026. The working implementation is
+[PR #6](https://github.com/poroburu/eecs3216-fpga-sc2-tactics/pull/6) at
+`7ce3b0e924949c3fc2966cbacd9eeae0be07a2f2`; this documentation branch does not
+contain that implementation. The [proposal scope](proposal/scope.md) distinguishes
+current functions from proposed additions.
 
-## Responsibilities
+## Adaptation of textbook Figure 1.1
 
-- **SC2:** game simulation, pathfinding, collision, cooldown progression, attack
-  resolution, and rendered game graphics on the PC.
-- **PC host:** launch/join/step the game; acquire legal observations; convert
-  units to stable indices and fixed-point records; exchange UART packets;
-  validate returned commands; submit actions; record results.
-- **FPGA:** strength estimation, tactical state, distance/range evaluation,
-  target allocation, per-snapshot reservations, and decision diagnostics.
-- **VGA:** a top-down schematic of unit markers, selected targets/waypoints, and
-  state text. It does not receive or reproduce SC2 image frames.
+Adapted conceptually from Lee and Seshia, *Introduction to Embedded Systems:
+A Cyber-Physical Systems Approach*, second edition, version 2.3, Figure 1.1,
+printed p. 6 ([author-hosted textbook](https://ptolemy.berkeley.edu/books/leeseshia/releases/LeeSeshia_DigitalV2_3.pdf)).
+This is an original project diagram, not a reproduction of the textbook artwork.
+The [standalone visual](proposal/architecture.html) presents the same feedback
+loop for a presentation; the proposal PDF includes a compact version.
 
-In required single-step operation: observe, send snapshot, await/validate reply,
-submit actions, then advance the game by the agreed number of loops. Measure
-wall-clock latency separately from simulation time. Test timeout/error behavior;
-an invalid reply is not a valid gameplay decision.
+```mermaid
+flowchart TB
+  subgraph PC["Platform 1: host PC"]
+    S["Sensor adapter: API observations<br/>positions, enemy HP; add friendly HP"]
+    H["Computation: fixed-point packing<br/>stable tag/index mapping, reply validation"]
+    A["Actuator adapter: API orders<br/>ATTACK today; add MOVE / HOLD intent"]
+    S --> H
+    H --> A
+  end
+  N["Network fabric: USB bridge + UART<br/>115200 baud, 8-N-1, checksum frames"]
+  subgraph HW["Platform 2: DE10-Lite FPGA"]
+    C["Custom RX/parser → target pipeline → reply FSM<br/>CLOSEST / FOCUS selected by SW0"]
+    T["Proposed: strength guard + tactical FSM<br/>ATTACK / RETREAT / HOLD"]
+    V["VGA / HEX / LEDs: targets and policy<br/>add strength bars, state and reason"]
+    C -. "proposed extension" .-> T
+    C --> V
+    T -.-> V
+  end
+  P(["Simulated plant: SC2 DefeatRoaches<br/>units, motion, pathing, combat, enemy waves"])
+  U["Human operator: policy switch / reset"]
+  P -->|"measured game state"| S
+  H -->|snapshot| N
+  N --> C
+  C -->|"target indices; add tactical intent"| N
+  N -->|reply| H
+  A -->|"validated native orders"| P
+  U --> C
+```
 
-## Supported model
+The API replaces physical sensing/actuation; **SC2 is a simulated plant**, not
+real-world physics or a camera feed. The PC and FPGA form two computing
+platforms connected by a network fabric. Orders change the game, which changes
+the next observation: that closes the feedback loop. VGA is diagnostic output,
+not the plant or the mechanism that controls the units.
 
-- Up to 16 records per side; initial demonstrations use 4–8 Marines versus 4–8
-  Zerglings in open terrain without upgrades or abilities.
-- Include only eligible current visible enemy facts. Unsupported records or
-  oversized snapshots must produce an explicit error; do not silently truncate.
-- Positive per-attacker damage estimates and effective reach are constant across
-  the supported target type. Range conversion must account for the selected
-  game's unit radii and coordinate units.
-- Objective and retreat waypoints are scenario inputs, not targets chosen by a
-  hidden software tactical controller.
+| Textbook element | Project equivalent | Boundary |
+|---|---|---|
+| Physical plant | SC2 units, motion and combat simulation | Game engine handles pathfinding, collisions, cooldowns and actual damage. |
+| Sensors | Legal visible-unit facts from the SC2 observation API | Host converts facts; no image recognition. |
+| Computation on platform 1 | Host packing, ID mapping, validation, logs | No replacement friendly target policy; offline reference runs are labeled. |
+| Network fabric | USB-to-UART bridge, GPIO RX/TX and framed packets | UART and host delays are measured separately from core cycles. |
+| Computation on platform 2 | FPGA target-selection datapath and control FSMs | Proposed strength guard adds tactical state. |
+| Actuators | SC2 action API calls mapped from FPGA results | Native attack currently includes movement into range and weapon execution. |
+| Human interface | Physical switches/reset; VGA/HEX/LED outputs | Policy switch is sampled per computation. |
 
-## Tactical baseline
+## Existing implementation in PR #6
 
-Use `S = sum(health_i * damage_per_attack_i)` over living units. This proxy ignores
-attack-interval differences and is not a validated combat outcome predictor.
+- Marines versus Roaches in **DefeatRoaches**, 16 records/side maximum.
+- Snapshot: ID, friendly x/y, enemy x/y/HP, squared reach; Q7.4 coordinates
+  bounded at 2047, enemy HP 8 bits. Friendly HP/cooldowns are not transmitted.
+- Reply: matching ID, status, policy, one target index per Marine and cycles.
+- CLOSEST ranks `(d², index)`. FOCUS ranks in-range first, then HP for in-range
+  units, then distance and index; all-out-of-range falls back to nearest.
+- Three stages: coordinate differences → squares/sum → key/minimum selection.
+  One pair per clock. Reported nonempty latency `F*E+2` cycles; max 258 at
+  50 MHz. Test the cycle contract, not an old source comment's off-by-one value.
+- Top-level transaction FSM: IDLE, COMPUTE, REPLY, ERROR; separate RX/TX/parser
+  FSMs. Input is staged/validated and committed only when the core can accept it.
+- Register records, not M9K RAM. Single 50 MHz clock domain; 25 MHz pixel enable,
+  640×480 VGA, no PLL. Completed display records are held stable between updates;
+  swaps are not explicitly restricted to vertical blank.
+- Actual PR #6 inter-byte timeout is **10 ms**, not the old scaffold's 100 ms.
+  Exact frames/pins are in that PR's `docs/protocol.md`; PR #5 has a different
+  contract. Reconcile deliberately before integrating either branch.
 
-- Empty friendly squads hold.
-- Trigger retreat when observed enemy strength is at least twice friendly
-  strength, or total friendly health is at most 25% of initial squad maximum.
-- Latch retreat until round reset; hold after arrival at the safety waypoint.
-- Otherwise attack when a ready friendly unit has an eligible target in range;
-  wait through an in-range cooldown; advance toward the objective when appropriate.
-- Waypoint arrival tolerance is one map unit.
+The host issues `Attack(target)` only when a target changes or a Marine is idle.
+SC2 can auto-target after a target dies until the next decision (eight loops,
+about 0.36 game seconds), and handles the initial real-time loops. A failed link
+causes no new host orders; old orders or native auto-targeting may continue.
+Therefore the FPGA is not responsible for every individual shot.
 
-Finalize transition priority and per-unit behavior at milestone 2. Test the score
-and cutoffs rather than attributing those exact values to the cited literature.
+## Proposed tactical extension
 
-## Allocation baseline
+Keep the verified target pipeline. Add `PF=kF*F²`, `PE=kE*E²`, friendly-health
+assessment, encounter/reset state and an ATTACK/RETREAT/HOLD tactical FSM.
+Target policy is independent of tactical state. When ATTACK is permitted, use
+CLOSEST or FOCUS; when retreat is latched, send MOVE toward the safe waypoint;
+when arrived or empty, HOLD. The host translates these intents without choosing
+the tactical state itself.
 
-Process ready attackers in stable index order. Rank eligible in-range targets by
-positive health remaining after this snapshot's reservations, then squared
-distance, then target index. Reserve estimated damage before the next attacker.
-Unassigned attackers hold during attack allocation. Reset reservations for the
-next snapshot; they are not an in-flight projectile/impact ledger.
-
-## Planned datapath and control
-
-- 50 MHz processing clock; PLL-derived 25.2 MHz VGA pixel clock.
-- Unsigned 16-bit positions/reach with six fractional bits.
-- Signed 17-bit coordinate differences and a 35-bit squared-distance sum.
-- 16-bit health/damage with four fractional bits, 20-bit reservations,
-  36-bit strength sums, and widened comparisons.
-- Four distance/ranking pipeline stages; synchronous on-chip record memory.
-- Master states: RECEIVE, VALIDATE, ASSESS, ALLOCATE, REPLY, ERROR.
-- Separate tactical state and retreat history; drain scans before committing
-  reservations; lock input memory during computation.
-- Transfer coherent, completed display snapshots across clock domains with a
-  handshake. Do not synchronize a changing multi-bit record one bit at a time.
-
-## Draft host/FPGA contract
-
-UART starts at 115,200 baud, 8-N-1. Frames will include a length and 8-bit additive
-checksum. Reject invalid records/counts/checksums and a 100 ms inter-byte timeout.
-
-Inputs include round/snapshot IDs, stable unit indices, health/max-health,
-positions, damage estimates, friendly readiness, and objective/retreat waypoints.
-Outputs include matching IDs, status, squad state, per-unit attack/move/hold
-intent, target index or waypoint, and computation cycles.
-
-Before implementation, settle:
-
-- Exact wire encoding, endianness, field widths, and checksum coverage.
-- Reset/start handshake, retry behavior, timeouts, and complete-frame commit.
-- Bounds, fixed-point rounding, overflow policy, zero-damage handling, and range tests.
-- Unit index/tag lifetime and round detection; use observed round boundaries.
-- Initial maximum-health capture and behavior after board reset mid-round.
-- HOLD semantics and order deduplication. Do not equate HOLD with repeatedly
-  issuing SC2 HoldPosition or cancelling an attack; validate the native mapping.
-- Result freshness and validation; explicit failure behavior rather than a
-  silent software replacement for faulty FPGA decisions.
-
-Keep this document aligned with the eventual executable contract and fixtures.
+The complete proposed priority, numeric bounds, latch behavior and integration
+gate are in [scope.md](proposal/scope.md#a-bounded-lanchester-implementation).
+Any added fields require a versioned contract, independent fixtures and updated
+host/RTL validation. Neither the extension nor a dedicated freeze/step UI is
+present in PR #6. Prefer the existing clock domain and pixel enable; add a
+frame-boundary display swap before promising tear-free presentation.
