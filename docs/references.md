@@ -59,7 +59,9 @@ and preserve its notices if reusing code. Current paired controls are CLOSEST
 and FOCUS on the same board/map, not a port of an external bot.
 
 - [Blizzard s2client-api](https://github.com/Blizzard/s2client-api): C++ API and
-  examples. The SDK is third-party code, not an original HDL contribution.
+  examples, pinned at `third_party/s2client-api` for the optional
+  [Linux launch/observe/step smoke test](sc2-linux.md). The SDK is third-party
+  code, not an original HDL contribution.
 - [MarineMicroBot source](https://github.com/Blizzard/s2client-api/blob/master/examples/common/bot_examples.cc):
   the original proposal's comparator for Marines versus Zerglings, now deferred.
   This is an example controller, not a complete competitive bot.
@@ -101,6 +103,6 @@ qualification. Map assets are external work, not part of the originality claim.
 
 Credit algorithms, copied/adapted code, generated IP, and maps separately.
 Original hardware implementation does not imply the underlying algorithm is new.
-This checkout contains the updated proposal on the original scaffold; the
-implementation and its detailed test records are in PR #6. Game clients, maps
+This checkout contains the updated proposal and earlier UART diagnostic with a
+pinned upstream SDK. The game demo and its detailed test records are in PR #6. Game clients, maps
 and textbook chapters are not redistributed with this draft.

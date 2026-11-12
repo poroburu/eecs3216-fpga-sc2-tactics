@@ -13,8 +13,8 @@ the returned orders. SC2 handles movement, pathing and combat.
 The working FPGA-in-the-loop implementation is in
 [PR #6](https://github.com/poroburu/eecs3216-fpga-sc2-tactics/pull/6)
 (reviewed at `7ce3b0e924949c3fc2966cbacd9eeae0be07a2f2`). This branch contains the
-updated proposal documents on top of the original scaffold; it does not include
-the PR's implementation. Use that PR's runbook for executable demo commands.
+updated proposal and the earlier UART diagnostic; it does not include
+the game demo implementation. Use that PR's runbook for executable demo commands.
 
 The project lead reports provisional TA approval of the demo and completed the
 implementation to date. The updated draft preserves the working comparison and
@@ -29,6 +29,8 @@ by this draft.
 - [CPS feedback architecture](docs/architecture.md)
 - [Schedule and realistic team allocation](docs/implementation-plan.md)
 - [Eight-minute demo presentation](docs/demo.md)
+- [Earlier diagnostic protocol](docs/protocol.md), [bring-up](docs/uart-bringup.md),
+  [verification](docs/verification.md), and [Linux SDK smoke test](docs/sc2-linux.md)
 - [Risks](docs/risks.md), [references](docs/references.md),
   [contribution workflow](CONTRIBUTING.md)
 
@@ -53,11 +55,15 @@ end-to-end CPU speedup is assumed.
 
 ## Repository layout
 
-`rtl/`, `sim/`, `host/`, `quartus/` and `scenarios/` are component placeholders in
-this checkout; PR #6 contains the demo implementation and its detailed results.
-`docs/` contains the updated scope, architecture, proposal, risks and team plan.
-Reusable new scripts belong in `scripts/`; the PR's existing `tools/` paths are
-referenced as they currently exist.
+`rtl/`, `sim/`, `host/` and `quartus/` contain the earlier UART diagnostic,
+its independent host/RTL tests and hardware evidence. PR #6 contains the game
+demo, which uses a different wire contract. Do not connect one host to the other
+bitstream. `third_party/s2client-api` pins the optional C++ Linux smoke-test SDK.
+`docs/` contains the updated proposal, architecture, risks and team plan.
+
+Run `python3 -m unittest discover -s sim -p 'test_*.py' -v` and, with Icarus
+Verilog 12 installed, `python3 sim/run_rtl.py` for the diagnostic. Reusable new
+scripts belong in `scripts/`; existing demo `tools/` paths are preserved.
 
 ## Course dates and credits
 
