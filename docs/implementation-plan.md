@@ -1,105 +1,92 @@
-# Implementation plan
+# Implementation and realistic team allocation
 
-Status: proposed schedule, November 5, 2026; UART/protocol work started November 8.
-See [verification](verification.md) for current evidence and remaining work.
-The [proposal](proposal/proposal.pdf) defines the intended assessed scope;
-instructor approval is pending.
+Updated November 12, 2026. The lead implemented the existing demo in
+[PR #6](https://github.com/poroburu/eecs3216-fpga-sc2-tactics/pull/6).
+The user reports provisional TA approval of that demo. The
+[updated proposal](proposal/proposal.pdf) adds one bounded Lanchester-inspired
+extension; expanded scope/Tier A remain subject to course approval.
 
-## Milestone 1 — Prove the scenario setup, by November 13
+## Ownership that matches available people and equipment
 
-- Launch an existing AI Arena micro map using a software-only host.
-- Check its round rules and select or minimally adapt supported Marine-versus-
-  Zergling scenarios. Do not assume every default round fits the hardware model.
-- Verify 4–8 units per side, open terrain, ownership, observation visibility,
-  actual spawns, resets, and objective/retreat waypoint placement.
-- Run an Attack-Closest baseline and evaluate the MarineMicroBot example policy
-  as the first named open-source comparator.
-- Pin the working client/build, map bytes/hash, API, and comparator revisions.
-- Confirm single-step SC2 operation and record the step interval.
-- Bring up board programming and a UART loopback in parallel where equipment permits.
+Names/IDs are still unassigned. Record actual contributions as work is delivered;
+future delegation does not imply other members wrote the existing implementation.
 
-Acceptance: a repeatable, software-controlled SC2 fight with recorded setup and
-commands, plus an agreed supported scenario. Neither map compatibility nor a
-working benchmark is established by this scaffold.
+| Role | Owns from now on | Concrete handoff and acceptance | Boundary |
+|---|---|---|---|
+| **Project lead — you** | Scope, algorithm/reference specification, tactical FSM, protocol changes, SC2 command integration, review, final build and submission | Freeze interfaces; integrate a live reference-matching controller; approve evidence and final report | Accountable for critical integration; do not assume four independent HDL developers. |
+| **Development partner — independent board, UART adapter and VGA access** | Reproduce baseline locally; strength-bar/state/reason renderer using an agreed register interface; assist reference, simulation and board regression | Setup notes plus own board test log; display module with known-value bars/state labels; baseline both-policy checker results | Lead supplies interface/fixtures and reviews changes. No separate host rewrite or map work. Start with a small display module if HDL experience is limited. |
+| **Report partner — no independent hardware required** | Report outline, citations, adapted CPS explanation, methods, results tables, limitations and contribution log | Draft sections and source-linked tables; each number identifies commit, policy and test type; compile/check one-page proposal and final report | Lead verifies technical claims. Do not invent measurements or assign this member core RTL. |
+| **Demo partner — works with lead's hardware** | Equipment/setup checklist, seeds and scenario manifest, matched-run logging, freeze/reset presentation flow, rehearsal timing and narration | Repeated setup from cold start with checklist; labeled baseline/FOCUS logs; an eight-minute rehearsal and backup evidence set | Operates tested commands, records evidence and explains the demo. Does not need to design algorithms or own a board. |
 
-## Milestone 2 — Agree the interface and reference model
+Each partner gets one initial deliverable that can be reviewed without blocking
+the lead: setup replay, report outline, or demo checklist. Agree a short check-in
+and preserve delivered files/commits so support work is visible in the report.
+Use issues and PRs per [CONTRIBUTING](../CONTRIBUTING.md); do not close existing
+transport/protocol issues just because a separate demonstration branch works.
 
-- Specify framing, lengths, checksum, reset/error behavior, snapshot/round IDs,
-  and stable unit indices.
-- Define input facts, fixed-point conversion, range geometry, command semantics,
-  numeric bounds, and rejection conditions.
-- Define capture of initial friendly maximum health and how death/round reset
-  affect it.
-- Implement an independent fixed-point software reference for strength, tactical
-  states, ranking, and reservations.
-- Produce known-answer fixtures before integrating the HDL.
+## November 12–13 — proposal and baseline evidence
 
-Acceptance: producer and consumer owners agree the contract; reference cases
-cover ties, boundaries, empty inputs, cooldown, retreat, and round reset.
-The [v1 wire contract](protocol.md) and byte fixtures are implemented;
-producer/consumer sign-off and tactical reference work remain pending.
+- Lead: submit the rescope based on the actual Marine/Roach demo; identify
+  current versus planned functionality and provisional versus final approval.
+- Development partner: obtain equipment and reproduce programming/checker setup;
+  record the demo commit and bitstream hash.
+- Demo partner with lead: retain the reported defeat-to-victory run's exact setup;
+  check both physical policies and record missing board FOCUS comparison evidence.
+- Report partner: assemble outline, references and textbook-adapted architecture.
 
-## Milestone 3 — FPGA core, November 14–20
+Acceptance: current demo remains runnable, draft is one page, and the comparison
+does not substitute software scores for board FOCUS trials.
 
-- Build UART RX/TX, framing, checksum, timeout, and record memory loading.
-- Implement the distance/range/ranking pipeline and strength accumulators.
-- Implement the tactical FSM and sequential allocation/reservation controller.
-- Protect input memory while computing; drain the pipeline before reservation writes.
-- Compile for the exact MAX 10 device early; inspect utilization and timing.
-- Verify ModelSim behavior against independent known answers and 1,000 randomized
-  snapshot sequences, including state history.
+## November 14–20 — one controlled extension
 
-Acceptance: valid snapshots yield reference-matching decisions; invalid packets
-cannot partially update an active computation. Resource and timing results must
-come from the actual Quartus design.
+- Lead freezes fixed-point coefficients, numeric bounds, guard priority,
+  friendly-HP/reset semantics, versioned wire contract and independent reference.
+- Lead implements bounded strength arithmetic and ATTACK/RETREAT/HOLD, adds
+  native MOVE/HOLD mapping, and qualifies a reachable safe point.
+- Development partner adds strength bars/state/reason to the existing VGA output
+  with fixed known-value inputs first; then checks the lead's integration.
+- Both developers test equality/threshold boundaries, empty sides, maximum
+  counts, HP threshold, retreat latch, ID/reset and enemy-wave transitions.
+- Report/demo partners build evidence templates and scene explanations in parallel.
 
-## Milestone 4 — SC2 and display integration, November 21–26
+**November 20 gate:** reference/protocol, live orders, reset and safe-point
+behavior must work together. Display-only bars do not satisfy the tactical
+extension. If this cannot pass, retain the baseline, seek course scope revision
+and explicitly label the strength score advisory; do not silently drop the FSM.
 
-- Translate current game observations to the agreed packets.
-- Submit only validated responses for the matching round/snapshot and unit tags.
-- Deduplicate unchanged orders and test attack persistence.
-- Exercise deaths, disappearing targets, empty squads, and consecutive rounds.
-- Implement VGA timing, marker/text rendering, coherent display-data transfer,
-  HEX diagnostics, and automatic/manual stepping.
+## November 21–26 — integrate and freeze
 
-Acceptance: FPGA decisions visibly drive approach, engagement, allocation, and
-retreat in supported SC2 scenarios. The PC performs game/API/transport duties,
-not a hidden replacement friendly tactical policy.
+- Integrate display, protocol and tactics without changing the established
+  CLOSEST/FOCUS behavior. Keep the old build available for regression.
+- Run independent directed/random/stateful reference checks, replayed SC2
+  snapshots and actual board checks under both switch settings.
+- Compile the complete extension for the exact device; retain resource and
+  setup/hold reports. Do not reuse baseline fit numbers as extension results.
+- Prepare replay of a single frozen snapshot, explicit policy/state/reason
+  labels, and a controlled checksum-error/recovery demonstration.
+- Freeze features November 26. No kiting, mixed-army/map-editor work or additional
+  policies unless all assessed core behavior is already complete.
 
-## Milestone 5 — Freeze, evaluate, rehearse, November 27–December 1
+## November 27–December 1 — measure, write and rehearse
 
-- Freeze several scenario starts and repeat matched runs with the FPGA,
-  Attack-Closest, and the qualified MarineMicroBot comparator.
-- Keep own army, opponent, map/client, starting conditions, and decision interval
-  matched when comparing controllers. Document any comparator adaptation.
-- Vary positions, health, and force balance to test reactions to observations.
-- Record outcomes, survivors, remaining health, game loops, invalid runs,
-  computation cycles, and end-to-end latency.
-- Save Quartus resource/timing reports and prepare the final report/code archive.
-- Rehearse the [demonstration](demo.md); freeze optional features.
+- Demo partner runs the matched scenario checklist with the lead: same seed,
+  map/client, bitstream and eight-loop decision interval; change one policy only.
+- Report partner records outcome/score, survivors/HP, valid/invalid runs and
+  separate core/link timings. Tune on development starts; evaluate other starts.
+- Lead validates claims and confirms no truncated snapshots are treated as clean
+  comparisons. Record guard prediction errors as well as successes.
+- Rehearse the [eight-minute demonstration](demo.md) with game and VGA visible.
+  Explain retreat by preservation of units, not an automatic victory claim.
+- Keep logs, bitstream/build steps and short labeled recordings as supporting
+  evidence. They do not replace required live hardware or SC2 integration.
 
-Acceptance: reproducible functional demonstrations and an honest measurement
-record. Winning every scenario, beating every comparator, and CPU speedup are
-not assumed outcomes.
+## Course dates
 
-## Proposed workstreams
+- Proposal: November 13, 2026, 23:59.
+- In-person demonstration: December 2, 2026, 16:00–18:50.
+- Final report and code: December 2, 2026, 23:59.
 
-- **Student 1 — UART/host:** protocol tests, serial loopback, SC2 tag and command
-  mapping, transport, and round resets.
-- **Student 2 — Datapath:** fixed-point reference, arithmetic widths, overflow,
-  distances, thresholds, and ranking ties.
-- **Student 3 — FSM/allocation:** tactical transitions, retreat persistence,
-  reservation dependencies, empty/cooldown cases, randomized sequences.
-- **Student 4 — VGA/integration:** timing and clock crossings, scenario/benchmark
-  qualification, integration, resource reports, and demo evidence.
-
-Actual names and owners are unassigned. Share host/scenario work across the team
-so integration is not deferred to the final week. A three-person team should
-redistribute these workstreams explicitly.
-
-## Scope control
-
-Required: the bounded SC2 control loop, verified hardware, schematic VGA output,
-and measured results. Defer continuous real-time operation, mixed armies, spells,
-production, complex terrain, learned policies, and competitive ladder deployment.
-Change assessed commitments through the course proposal process if needed.
+Required scope: preserve the working FPGA/SC2 A/B target selector, verified custom
+hardware and VGA; integrate the proposed bounded guard/FSM subject to course
+approval. Defer reservations, kiting, full path planning, production, abilities,
+learned policies, competitive ladder play and external-bot benchmarking.
