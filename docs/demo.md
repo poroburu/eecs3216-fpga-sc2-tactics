@@ -1,102 +1,104 @@
-# Demo runbook
+# Demo plan: make the decision visible
 
-About 8 minutes. Everything below has been run on our PC and board. Read
-[how-it-works.md](how-it-works.md) first; it is the explanation to give.
+Updated proposal presentation, November 12, 2026. Target: eight minutes.
+The working demo commands are in the [executable runbook](demo-runbook.md)
+and `tools/demo.sh`. This document scopes the updated presentation;
+it is not a claim that the proposed strength/FSM/freeze features already run.
 
-## Equipment
+## Setup and rehearsal checklist
 
-- A PC with WSL2, Quartus Prime Lite 25.1std, the Linux SC2 4.10 client in `~/StarCraftII`,
-  and the Windows SC2 client.
-- DE10-Lite on the USB-Blaster.
-- FT232R USB-UART adapter (COM5), set to **3.3 V**, wired as:
-  - adapter TXD → `GPIO[0]` (header pin 1)
-  - adapter RXD → `GPIO[1]` (header pin 2)
-  - GND → GND
-- VGA monitor on the DE10-Lite VGA port. **Not yet tried on a real monitor**: only the
-  simulated frame and its 16.8 ms frame period have been checked.
+Demo partner operates the checklist; lead handles faults and technical questions.
+Connect the DE10-Lite, verified 3.3 V USB/UART wiring and ground, USB-Blaster,
+SC2 host and VGA monitor. Use the actual tested client/map/build and preserve
+their versions/hashes. Show game and FPGA VGA side by side.
 
-## 10 minutes before
+Run baseline preflight/check first; repeat the board checker with each `SW0`
+setting and retain logs. Prepare one recorded real snapshot that gives different
+CLOSEST/FOCUS targets. Use a tested replay command for inspection, not a newly
+invented button assignment. Resume/restart a live game after inspection.
+PR #6 assigns `KEY0` reset, `KEY1` clear errors, `SW4:1` selected Marine;
+do not promise a manual-step button without implementing and documenting it.
 
-```bash
-cd <repo>
-tools/demo.sh preflight     # USB-Blaster + 10M50DA, COM5, both SC2 installs, Python env, bitstream
-tools/demo.sh program       # the bitstream is volatile: reprogram after every power-cycle
-tools/demo.sh check         # expect "RESULT PASS 1216/1216" (~20 s)
-```
+Prepare a matched seed for the reported defeat-to-victory comparison and a few
+additional starts; label native result separately from mini-game score. Reset
+between outcome comparisons. A mid-fight toggle shows immediate behavior, but
+does not by itself establish a matched causal outcome comparison.
 
-`check` is a dry run, not part of the demo. It pushes about 60 frames a second, so the
-VGA and HEX flicker too fast to follow. Keep its last lines on screen to quote in step 5.
+## 0:00–0:50 — the loop, in ordinary language
 
-Set `SW0` down (CLOSEST), `SW4..1` all down, and press `KEY0` once.
+Use the [adapted CPS diagram](architecture.md):
+“The game is our simulated plant. The PC measures positions and health, sends
+them over UART, and applies the FPGA's answer. The board decides which enemy to
+attack; the next game state feeds back into the next decision.”
 
-If the bitstream is missing, run `tools/demo.sh build` first (about 45 s). If the Python
-environment is missing:
+Explain Marines as friendly units and Roaches as enemy units. SC2 handles motion,
+combat and enemy waves; the PC does not choose friendly targets. Some built-in
+auto-targeting is possible between FPGA decisions.
 
-```bash
-uv venv host/.venv && VIRTUAL_ENV=host/.venv uv pip install -r host/requirements.txt
-```
+## 0:50–3:10 — same situation, different targeting
 
-## Script
+Run CLOSEST from the selected start. Ask the audience to watch target lines and
+enemy health. Reset the same start, change the physical switch to FOCUS and run
+again. Show the reported turnaround if reproduced; otherwise show measured
+score/survivor differences without calling a score a victory.
 
-### 1. The boundary (1 min)
+Explain: “Finishing one enemy removes one source of damage. Spreading hits can
+leave several enemies alive and firing.” FOCUS means weakest **in each unit's
+range**, otherwise nearest; it is not a global lock onto one enemy.
 
-Show the board, the adapter wires, and the VGA monitor.
+## 3:10–4:30 — stop on one hardware decision
 
-> "SC2 simulates the fight. The PC only translates. The FPGA decides which enemy each
-> Marine shoots. `SW0` chooses between two exactly specified rules."
+Replay the prepared snapshot unchanged under both switches. Select one Marine
+and show policy, snapshot ID, target ID/HP, range status and squared distance.
+Show subtract → square/sum → compare/min. VGA target lines make the output
+readable without understanding SC2 tactics.
 
-Open [protocol.md](protocol.md) at "The rule" and point at the four-line key definition.
+Explain the difference between target policy and state: “This changes whom we
+attack. It does not yet say whether the squad should attack or retreat.” Keep
+the transport FSM (IDLE/COMPUTE/REPLY/ERROR) distinct from tactical behavior.
 
-### 2. Live game, CLOSEST (2.5 min)
+## 4:30–6:00 — why the proposed tactical state changes
 
-```bash
-tools/demo.sh watch          # visible SC2 window at normal speed; Ctrl-C to stop early
-```
+Only show live retreat once the extension gate has passed. Start with a clear
+advantage, then a qualified disadvantage/low-HP case. Show `PF`, `PE`, threshold
+reason and `ATTACK → RETREAT → HOLD at safety`. Show explicit encounter reset
+clearing the latch. Use boundary snapshot replay to expose the exact comparison.
 
-- The terminal prints every decision: Roach HP → the FPGA's target list, round-trip time,
-  and FPGA clock cycles.
-- On VGA, the banner is cyan. Each Marine has a dimmed line to the Roach it is shooting,
-  and the lines fan out across several Roaches. `LEDR9..4` shows several distinct targets.
-- Use `SW4..1` to pick a Marine; `HEX0` shows its current target.
+“The square-law strength estimate values keeping more weapons alive. It is a
+small approximation, not a guaranteed prediction. The FPGA uses a specified
+comparison to decide whether to keep fighting or preserve units.”
 
-### 3. Flip SW0 to FOCUS during the game (2.5 min)
+Judge this scene by units/HP preserved or survival time. A retreat can forfeit
+the wave objective. If only bars exist, label them advisory and explain that
+they are not controlling SC2; obtain course approval for any assessed-scope change.
 
-- `HEX3` changes `C` → `F` and the banner turns orange.
-- The lines from Marines in range swing onto the weakest Roach, and the `LEDR` bar shrinks.
-- The terminal's policy column changes to `FOCUS`. No software was touched.
+## 6:00–7:15 — the FPGA contribution
 
-> "Same game, same PC code. The only change is one switch on the FPGA."
+- Show VGA continuing while UART receives/returns decisions.
+- Show measured cycle count and link latency separately. PR #6 reports max
+  258 clocks / 5.16 µs core versus 15.9 ms median round trip; replace with current
+  build results after adding logic. Serial/USB dominates end-to-end latency.
+- Inject a known bad-checksum frame with the test tool; point to the error and
+  unchanged good snapshot, then send a valid frame to show recovery.
+- Present the current Quartus timing/resource summary and independent reference
+  check results. Explain predictable pipelined computation and concurrent I/O,
+  not a claim that Python cannot compute these rules or that FPGA causes victory.
 
-### 4. Matched comparison (1 min)
+## 7:15–8:00 — evidence and roles
 
-Real-time games are not repeatable, so the fair comparison uses fixed seeds in step mode:
+Show a compact table of matched starts/policies/results, board versus reference,
+invalid/truncated runs and measurement definitions. Identify the lead's existing
+implementation and each partner's delivered development/report/demo work.
 
-```bash
-tools/demo.sh compare 5      # headless, ~7 s per game, uses the current SW0
-```
+Be ready for “Why FPGA?”: “This is a bounded hardware controller with custom
+communication, a pipelined datapath, explicit control and continuous video output.
+The game makes its decisions visible. We measure core predictability and verify
+its outputs; we do not claim end-to-end CPU acceleration.”
 
-Run it once with `SW0` down and once up. The reference numbers over seeds 1–10 are
-CLOSEST 32.1 and FOCUS 62.4 ([results.md](results.md)). Five games give a smaller sample.
+## Evidence to retain
 
-### 5. Verification, resources, and the dry run (1 min)
-
-Say what the dry run proved: 1,216 frames over the real UART, every byte matching the
-independent reference, in both Verilator and Questa. Then point at the Quartus figures in
-[results.md](results.md): 15,847 LEs, 4,194 registers, 68 embedded 9-bit multiplier
-elements, +4.283 ns setup slack at 50 MHz.
-
-## If something fails
-
-| Symptom | Do |
-|---|---|
-| `check` fails with link errors | Check the three adapter wires and the 3.3 V jumper, then reprogram |
-| Everything on HEX is dark | The board was power-cycled: run `tools/demo.sh program` |
-| SC2 window never opens | `powershell.exe "Get-Process SC2_x64 \| Stop-Process"`, then retry. Headless still works: `host/.venv/bin/python host/sc2_demo.py --port win:COM5` |
-| No board at all | `tools/demo.sh model 1` runs the same game with the Python reference. Say clearly that this is the software reference, not the FPGA. |
-
-## Not yet demonstrated
-
-- The target lines on the real monitor. The markers and banner were seen working on November 8.
-- `hw_check` with `SW0` up. Only CLOSEST has been checked on the board, because the
-  switch has to be flipped by hand. FOCUS cases (directed, SC2 traces, and about half the random set) pass in simulation.
-- A full game where `SW0` is flipped partway through.
+Source/bitstream/map hashes; client/API/tool versions; mode, seed and decision
+interval; switch trace; raw observations/results; errors/truncation; native result
+and score; survivors/HP; core cycles; end-to-end timing; Quartus setup/hold/resource
+reports; each partner's handoff. Keep labeled logs/replays/video for support if a
+live service fails, while preserving the live hardware/SC2 requirement.

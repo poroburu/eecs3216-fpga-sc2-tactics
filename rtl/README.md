@@ -16,3 +16,29 @@ in [how-it-works](../docs/how-it-works.md).
 
 Everything is in one 50 MHz clock domain. Asynchronous inputs (UART RX, `SW`, `KEY`)
 pass through 2-flop synchronizers. Original work of the group; no IP cores are used.
+
+## Earlier UART diagnostic (separate build and wire contract)
+
+Use the [diagnostic contract](../docs/diagnostic-protocol.md), not the demo
+frames above. The following retained instructions describe that diagnostic only.
+
+SystemVerilog, synchronous active-high reset, one 50 MHz clock:
+
+- `diagnostic/uart_rx.sv` (`uart_rx`): two-flop synchronization, start confirmation, LSB-first 8N1, stop-bit
+  error and break recovery. Divider 434 gives 115207.37 baud (+0.0064%).
+- `diagnostic/uart_tx.sv` (`uart_tx`): ready/valid byte input, full start/data/stop timing.
+- `packet_rx`: v1 framing, count/record/numeric validation, additive checksum,
+  5,000,000-clock timeout and double-buffered atomic payload commit. Metadata
+  remains stable until `packet_ready`. Payload reads have one-clock latency;
+  only read below payload length. Hold `packet_ready` low while computing.
+  Unsolicited bytes while committed are dropped and counted.
+- `packet_tx`: envelope/checksum serialization with byte backpressure; caller
+  holds metadata and combinational payload data stable until `done`.
+
+The receiver validates frame shape/fields, not session history. The eventual
+consumer must implement START, stale IDs, full-byte duplicate cache, initial-health
+consistency and tactical state from [protocol](../docs/diagnostic-protocol.md). The Quartus
+diagnostic returns UNSUPPORTED for snapshots and is not that consumer.
+
+See [sim](../sim/README.md). The diagnostic has no tactical consumer or VGA. The demo above implements
+target selection and VGA separately; strength/FSM/reservations remain unimplemented.

@@ -1,97 +1,79 @@
-# Risks and responses
+# Risks and responses — updated proposal
 
-Status: prospective risks; no integration or synthesis results are available yet.
+November 12, 2026. Existing demo evidence is in
+[PR #6](https://github.com/poroburu/eecs3216-fpga-sc2-tactics/pull/6).
+The Lanchester guard/tactical FSM is proposed, not part of that demo.
 
-## Map and scenario compatibility — high
+## Scope and integration — high
 
-Default AI Arena micro rounds may exceed unit counts, introduce unsupported
-abilities/types, or use terrain outside the model.
+The target selector works, but friendly HP, retreat/hold, waypoints and explicit
+encounter reset require protocol, HDL and host changes. Do not mistake a small
+arithmetic block for a small complete integration.
 
-- Check a downloaded map before freezing the proposal's scenario details.
-- Select or minimally adapt a small supported matchup; pin the map bytes/version.
-- Verify actual spawns, ownership, positions, health, resets, and visibility.
-- A download link is not evidence that the map works with our selected client.
+- Freeze a bounded versioned contract/reference first; keep the demo build intact.
+- Lead owns integration; development partner takes the bounded display/test work.
+- Require live intents/reset/safety behavior by November 20; if missed, seek
+  course scope revision rather than silently substituting advisory bars.
+- Freeze features November 26. Defer kiting, reservations, mixed armies and maps.
 
-## SC2/API/client versions — high
+## Tactical model and scenario mismatch — high
 
-An SDK example, map revision, or benchmark can depend on a different client/API.
+Lanchester's square law is an approximation. Equal counts do not imply equal
+Marine/Roach strength; wounded units, geometry and waves violate ideal assumptions.
+Retreat can preserve units while losing the mini-game objective.
 
-- Prove one working combination in milestone 1 and preserve exact revisions.
-- Recheck behavior after changing any part of that combination.
-- Maintain runnable local setup instructions; do not assume another student's
-  installation matches the tested one.
+- Use matchup-specific, documented integer effectiveness coefficients and a
+  separate HP guard; calibrate on development starts and evaluate other starts.
+- Show the computed values, state and exact guard reason. Label prediction errors.
+- Keep FOCUS independent of the strength guard; compare one change at a time.
+- Evaluate retreat by survival/remaining HP with a reachable safe point; do not
+  promise the existing turnaround in every scenario or call all score gains wins.
 
-## Host/FPGA contract and command semantics — high
+## Protocol branches and native command behavior — high
 
-Old round IDs, dead units, visibility changes, malformed packets, or repeated
-orders can produce invalid actions or interrupt useful attacks.
+PR #5 and PR #6 have different contracts. The older scaffold's 100 ms timeout,
+RAM/PLL plan and four-stage pipeline do not describe PR #6's 10 ms timeout,
+register records, pixel enable and three-stage target pipeline.
 
-- Validate identifiers and command legality; preserve current visible facts.
-- Commit complete input frames atomically; reject partial/oversized input.
-- Test reset, death, disappearing targets, cooldown, and round transitions.
-- Define HOLD and suppress redundant native orders; inspect actual actions/orders.
-- Record errors and invalid runs instead of silently counting them as normal fights.
+- Reconcile contracts explicitly; version changes and validate matching IDs/status.
+- Reset the retreat latch on an explicit new encounter, not an empty wave gap.
+- Test stale replies/session resets, deaths, no-enemy cases and max capacity.
+- Specify HOLD and suppress redundant orders. Native attack/move cancellation
+  can invalidate a visually plausible tactic; inspect actual API actions.
+- No hidden software targeting fallback. After link failure, old native orders
+  and auto-targeting may continue; count errors and mark affected runs.
 
-## Communication latency — high for real-time play
+## Hardware arithmetic and display — medium/high
 
-At 115,200 baud and 8-N-1, payload capacity is at most 11,520 bytes/s before packet
-overhead. Transfer time may dominate the hardware computation.
+The new square products and threshold multipliers need explicit widths and exact
+boundary behavior. Display snapshots can change during a VGA frame.
 
-- Require single-step SC2 initially; measure computation and round trip separately.
-- Use an equal simulation decision interval for all gameplay comparators.
-- Continuous real-time operation and a higher baud rate require separate tests.
-- No end-to-end CPU speedup is assumed.
+- Test ties, equal thresholds, zero/max counts, HP limits, latches and reset
+  against an independent reference; repeat on board under both switch settings.
+- Refit the full design and retain setup/hold/resource reports.
+- Preserve the single clock domain; add a frame-boundary swap for tear-free claims.
+- Use small text/marker/bar additions; target-line rendering already consumes a
+  significant part of the baseline design's resources.
 
-## HDL arithmetic, memory hazards, and timing — high
+## Evidence and latency — medium/high
 
-Incorrect signed widths, overflow, pipeline-valid handling, reservation ordering,
-or clock crossings can corrupt decisions even when a short example looks right.
+PR #6's board tests and game parity were CLOSEST; its retained FOCUS score results
+were software runs. User-reported later defeat-to-victory behavior needs matched
+logs to support a reproducible hardware result.
 
-- Use independent known answers and randomized stateful sequences.
-- Exercise maximum values, ties, exact range boundaries, empty inputs, and reset.
-- Drain before dependent writes; protect active input records.
-- Compile early and use actual Quartus resource and timing reports.
-- Check coherent VGA handoff and UART input synchronization on hardware.
+- Record both board policies with the same start, versions, mode and step interval.
+- Separate native result, map score, survivors and HP. Count invalid/truncated runs.
+- Keep single-step evaluation; native auto-targeting may occur between decisions.
+- Report core cycles and whole-link elapsed time separately. At 115200 8-N-1,
+  throughput is at most 11,520 bytes/s before framing. Baseline median round trip
+  15.9 ms is much larger than maximum reported core computation 5.16 µs.
+- Do not claim CPU acceleration, power savings or hard real time without evidence.
 
-## Tactical quality and combat-model mismatch — medium/high
+## Equipment and team handoffs — medium
 
-The health-times-damage score and retreat thresholds are heuristics. They omit
-attack-rate differences, terrain, many game mechanics, and future impacts.
-
-- Keep the initial matchup/terrain narrow and test threshold sensitivity.
-- Treat damage reservations as estimates, not confirmed lethal hits.
-- Vary starting conditions and preserve losing runs.
-- Evaluate survivors, health, and outcomes; correct arithmetic alone does not
-  establish better tactics or general SC2 capability.
-
-## Benchmark validity — medium/high
-
-MarineMicroBot is a small example controller specialized for Marines versus
-Zerglings. Full-game bots need adaptation before serving as fixed-army controls.
-
-- Pin and run the chosen example policy; document any changes.
-- Compare controllers on matched starts with the same opponent and step interval.
-- Keep Attack-Closest as a simple interpretable baseline.
-- Do not attribute effects of different armies, map mechanics, or decision rates
-  to the FPGA's algorithm.
-
-## Schedule and scope growth — high
-
-UART, HDL, a game host, maps, and video integration can consume the available time.
-
-- Finish the software-controlled scenario early and integrate continuously.
-- Keep VGA to markers/text, the four tactical states, and supported fixed armies.
-- Defer production, mixed units, spells, complex navigation, learning, and ladder deployment.
-- Freeze optional features before rehearsal; discuss assessed-scope changes with
-  the instructor rather than silently dropping required behavior.
-
-## Lab equipment and reproducibility — medium
-
-The board, suitable 3.3 V serial adapter, VGA monitor, and a working SC2 PC may not
-all be available during the final session.
-
-- Check equipment and cabling early; rehearse the actual arrangement.
-- Keep a tested setup guide, pin assignments, scenario inputs, and bitstream build
-  procedure with version information.
-- Retain logs/replays where available as supporting evidence. A recording does
-  not replace the required live hardware demonstration.
+- Development partner needs a board, verified 3.3 V UART adapter, VGA and tool setup
+  for independent work; first acceptance is reproducing a baseline board check.
+- Report partner works from traceable logs/citations; demo partner rehearses with
+  the lead's hardware and owns setup, timing and repeatability.
+- Keep exact build/setup commands and supporting recordings/logs, but preserve
+  the live hardware/SC2 demonstration requirement. Record actual contributions.

@@ -12,5 +12,11 @@ verilator --binary --timing -j 8 -Wall -Wno-fatal -Wno-DECLFILENAME -Wno-UNUSEDS
   || { tail -40 sim/build/verilator.log; exit 1; }
 grep -E "%Warning" sim/build/verilator.log | sed 's/^/  /' | head -20 || true
 for s in ${*:-directed sc2_trace random}; do
-  ( cd sim/vectors && ../build/obj/tb +VEC=$s.mem ) | tee "sim/build/result_$s.log" | grep -E "RESULT|FAIL|expected:|got:|VGA" | head -40
+  log="sim/build/result_$s.log"
+  if ! ( cd sim/vectors && ../build/obj/tb +VEC="$s.mem" ) > "$log" 2>&1; then
+    cat "$log"
+    exit 1
+  fi
+  grep -E "RESULT|FAIL|expected:|got:|VGA" "$log" | head -40
+  grep -Eq 'RESULT .*: [1-9][0-9]* cases, [1-9][0-9]* pass, 0 fail' "$log"
 done

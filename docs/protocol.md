@@ -1,5 +1,9 @@
 # Host ↔ FPGA contract
 
+This contract is for `quartus/sc2fpga/sc2fpga.qpf` and `host/sc2fpga/`.
+It is incompatible with the earlier [UART diagnostic](diagnostic-protocol.md).
+Neither contract implements the proposed strength guard/tactical-state extension.
+
 This is the whole specification of what the FPGA computes. Three files implement it
 independently:
 

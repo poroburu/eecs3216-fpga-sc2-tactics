@@ -29,6 +29,7 @@ module tb_sc2fpga;
   logic [11:0] vec [0:(1<<21)-1];
   byte unsigned req[$], exp_q[$], got[$];
   int pass = 0, fail = 0, ncase = 0;
+  int vec_file;
 
   task automatic send_byte(input byte unsigned b);
     rx_line = 0; repeat (CPB) @(posedge clk);
@@ -39,7 +40,11 @@ module tb_sc2fpga;
   task automatic recv_byte(output byte unsigned b, output bit ok);
     int waited = 0;
     ok = 0;
-    while (gpio[1] !== 1'b0) begin @(posedge clk); if (++waited > 20 * TIMEOUT) return; end
+    while (gpio[1] !== 1'b0) begin
+      @(posedge clk);
+      waited++;
+      if (waited > 20 * TIMEOUT) return;
+    end
     repeat (CPB / 2) @(posedge clk);
     for (int i = 0; i < 8; i++) begin repeat (CPB) @(posedge clk); b[i] = gpio[1]; end
     repeat (CPB) @(posedge clk);
@@ -78,6 +83,9 @@ module tb_sc2fpga;
 
   initial begin
     void'($value$plusargs("VEC=%s", VEC));
+    vec_file = $fopen(VEC, "r");
+    if (vec_file == 0) $fatal(1, "Cannot open vector file %s", VEC);
+    $fclose(vec_file);
     $readmemh(VEC, vec);
     key[0] = 0; repeat (20) @(posedge clk); key[0] = 1; repeat (20) @(posedge clk);
     for (int a = 0; vec[a] !== 12'hFFF && vec[a] !== 12'hxxx; a++) begin
@@ -91,6 +99,8 @@ module tb_sc2fpga;
     $display("RESULT %s: %0d cases, %0d pass, %0d fail", VEC, ncase, pass, fail);
     if (t_vs.size() >= 2) $display("VGA frame period %0d ns (expected %0d)", t_vs[1] - t_vs[0], 800 * 525 * 2 * 20);
     else $display("VGA frame period: fewer than 2 vsync pulses in this run");
+    if (ncase == 0 || fail != 0)
+      $fatal(1, "Simulation failed: %0d cases, %0d mismatches", ncase, fail);
     $finish;
   end
 endmodule

@@ -1,9 +1,10 @@
 # Working together
 
 Start with the [implementation plan](docs/implementation-plan.md) and
-[architecture](docs/architecture.md). There is no implementation to build yet;
-the first milestone is a working software-controlled SC2 scenario and a tested
-map/client/API combination.
+[architecture](docs/architecture.md). Follow the [demo runbook](docs/demo-runbook.md)
+for executable commands and keep current results separate from proposed features.
+The earlier UART diagnostic uses a separate [contract](docs/diagnostic-protocol.md)
+and test suite; it is not interchangeable with the demo.
 
 ## Small, reviewable changes
 
@@ -16,7 +17,7 @@ map/client/API combination.
 5. Include the verification actually performed and unresolved limitations.
 6. Merge after review and any configured checks pass.
 
-Use the numbered Student 1–4 workstreams until actual owners are assigned.
+Use the lead/development/report/demo roles until actual names are assigned.
 Interface changes need agreement from both producer and consumer owners before
 dependent implementations are merged.
 

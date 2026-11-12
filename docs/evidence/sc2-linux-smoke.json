@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-08",
+  "platform": "WSL2 Linux x86_64",
+  "sdk": {
+    "repository": "https://github.com/Blizzard/s2client-api.git",
+    "path": "third_party/s2client-api",
+    "revision": "614acc00abb5355e4c94a1b0279b46e9d845b7ce",
+    "protocol_revision": "b73eb59ac7f2c52b2ca585db4399f2d3202e102a",
+    "vendor_patches": false
+  },
+  "runtime": {
+    "install_root": "/home/poroburu/dev/sc2/StarCraftII",
+    "version": "4.10.0.75689",
+    "executable_relative": "Versions/Base75689/SC2_x64",
+    "executable_sha256": "115f65a49191c504f6336f7d5b7818b23dbba3d7a45cacf9142c86c959abaa41",
+    "base_build": 75689,
+    "data_version": "B89B5D6FA7CBF6452E721311BFBC6CB2"
+  },
+  "map": {
+    "relative_path": "Maps/BelShirVestigeLE.SC2Map",
+    "sha256": "19335cc1f338461db4071c68925ed1f99f6ceadde742742e1a5c38e621ef44ea",
+    "purpose": "melee infrastructure smoke; not qualified tactical scenario"
+  },
+  "tools": {
+    "cmake": "cmake version 3.28.3",
+    "compiler": "g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+  },
+  "commands": [
+    "git submodule update --init --recursive",
+    "cmake -S host/sc2 -B build/sc2 -DCMAKE_BUILD_TYPE=Release",
+    "cmake --build build/sc2 --target sc2_smoke -j 4",
+    "timeout --kill-after=5s 90s build/sc2/bin/sc2_smoke \"$HOME/StarCraftII/Versions/Base75689/SC2_x64\" \"$HOME/StarCraftII/Maps/BelShirVestigeLE.SC2Map\""
+  ],
+  "result": {
+    "success": true,
+    "initial_loop": 0,
+    "final_loop": 8,
+    "startup_steps": 0,
+    "verified_steps": 8,
+    "raw_visible_self_units": 13,
+    "sdk_converted_self_units": 0,
+    "summary": "SC2_SMOKE_OK base_build=75689 data_version=B89B5D6FA7CBF6452E721311BFBC6CB2 initial_loop=0 final_loop=8 startup_steps=0 steps=8 raw_self_units=13 sdk_self_units=0"
+  },
+  "limitations": [
+    "Legacy SDK unit converter aborts on CloakedUnknown neutral units; smoke uses GetRawObservation()",
+    "No tactical scenario qualification, unit orders, UART exchange or hardware-derived action"
+  ]
+}

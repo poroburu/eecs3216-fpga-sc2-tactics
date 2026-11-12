@@ -14,7 +14,14 @@ RTL="rtl/sc2fpga_pkg.sv rtl/uart_rx.sv rtl/uart_tx.sv rtl/frame_rx.sv rtl/target
 "$QUESTA/vlib.exe" work > /dev/null 2>&1 || true
 "$QUESTA/vlog.exe" -sv -quiet $RTL sim/tb_sc2fpga.sv > vlog.log 2>&1 || { cat vlog.log; exit 1; }
 for s in ${*:-directed sc2_trace random}; do
-  "$QUESTA/vsim.exe" -c -quiet tb_sc2fpga +VEC=sim/vectors/$s.mem -do "run -all; quit -f" > "vsim_$s.log" 2>&1 || true
-  grep -E "RESULT|FAIL|expected:|got:|VGA frame|Error|Fatal" "vsim_$s.log" | head -40
-  cp "vsim_$s.log" "$root/sim/" 2>/dev/null || true
+  log="vsim_$s.log"
+  if ! "$QUESTA/vsim.exe" -c -quiet tb_sc2fpga +VEC="sim/vectors/$s.mem" \
+      -do "onerror {quit -code 1}; run -all; quit -f" > "$log" 2>&1; then
+    cat "$log"
+    exit 1
+  fi
+  cp "$log" "$root/sim/"
+  grep -E "RESULT|FAIL|expected:|got:|VGA frame|Error|Fatal" "$log" | head -40
+  grep -Eq 'RESULT .*: [1-9][0-9]* cases, [1-9][0-9]* pass, 0 fail' "$log"
+  if grep -Eq 'FAIL|Error|Fatal' "$log"; then exit 1; fi
 done
