@@ -1,0 +1,19 @@
+# Quartus Prime Lite 25.1std project for the DE10-Lite (MAX 10 10M50DAF484C7G).
+# Build from WSL with: tools/qbuild.sh quartus/sc2fpga sc2fpga
+# (that script copies ../../rtl to rtl/ and appends quartus/common/de10_lite_pins.tcl)
+set_global_assignment -name FAMILY "MAX 10"
+set_global_assignment -name DEVICE 10M50DAF484C7G
+set_global_assignment -name TOP_LEVEL_ENTITY sc2fpga_top
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 8
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/sc2fpga_pkg.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/uart_rx.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/uart_tx.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/frame_rx.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/target_select.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/frame_tx.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/hex7seg.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/vga_timing.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/vga_render.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/sc2fpga_top.sv
+set_global_assignment -name SDC_FILE sc2fpga.sdc
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS_WEAK_PULLUP "AS INPUT TRI-STATED WITH WEAK PULL-UP"

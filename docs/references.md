@@ -103,6 +103,7 @@ qualification. Map assets are external work, not part of the originality claim.
 
 Credit algorithms, copied/adapted code, generated IP, and maps separately.
 Original hardware implementation does not imply the underlying algorithm is new.
-This checkout contains the updated proposal and earlier UART diagnostic with a
-pinned upstream SDK. The game demo and its detailed test records are in PR #6. Game clients, maps
+This checkout contains the updated proposal, game demo, earlier UART diagnostic
+and pinned upstream SDK. Demo evidence is in [results](results.md); the earlier
+diagnostic/SDK evidence is in [verification](verification.md). Game clients, maps
 and textbook chapters are not redistributed with this draft.

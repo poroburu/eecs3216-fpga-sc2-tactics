@@ -1,10 +1,10 @@
 # Working together
 
 Start with the [implementation plan](docs/implementation-plan.md) and
-[architecture](docs/architecture.md). The working implementation is in
-[PR #6](https://github.com/poroburu/eecs3216-fpga-sc2-tactics/pull/6); this branch
-updates the proposal on top of the original scaffold. Follow that PR's runbook
+[architecture](docs/architecture.md). Follow the [demo runbook](docs/demo-runbook.md)
 for executable commands and keep current results separate from proposed features.
+The earlier UART diagnostic uses a separate [contract](docs/diagnostic-protocol.md)
+and test suite; it is not interchangeable with the demo.
 
 ## Small, reviewable changes
 

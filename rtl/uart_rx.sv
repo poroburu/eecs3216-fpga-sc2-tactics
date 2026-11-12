@@ -1,45 +1,52 @@
-// 8N1 receiver. Synchronous active-high reset; 2-FF asynchronous input synchronizer.
-module uart_rx #(
-    parameter integer CLOCK_HZ = 50_000_000,
-    parameter integer BAUD = 115_200,
-    parameter integer BIT_TICKS = (CLOCK_HZ + BAUD/2) / BAUD
-) (
-    input wire clk, rst, rx,
-    output reg [7:0] data,
-    output reg valid, framing_error
+// UART receiver, 8-N-1, LSB first.
+// The asynchronous rx line passes through a 2-flop synchronizer. A falling edge starts a frame;
+// the start bit is re-checked at its middle, then each data bit and the stop bit are sampled
+// at their middles (every CLKS_PER_BIT clocks). A byte with a bad stop bit is discarded.
+module uart_rx #(parameter int CLKS_PER_BIT = 434) (   // 50 MHz / 115200 = 434.03
+  input  logic       clk,
+  input  logic       rst,
+  input  logic       rx,
+  output logic [7:0] data,
+  output logic       valid            // 1-cycle pulse with a good byte
 );
-    (* altera_attribute = "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS" *) reg rx_meta, rx_sync;
-    localparam IDLE=0, START=1, DATA=2, STOP=3, BREAK_WAIT=4;
-    reg [2:0] state;
-    integer ticks;
-    reg [2:0] bit_index;
-    reg [7:0] shift;
-    always @(posedge clk) begin
-        if (rst) begin rx_meta <= 1; rx_sync <= 1; end
-        else begin rx_meta <= rx; rx_sync <= rx_meta; end
+  localparam int CW = $clog2(CLKS_PER_BIT + 1);
+  typedef enum logic [1:0] {IDLE, START, DATA, STOP} state_t;
+  state_t        state;
+  logic          rx_m, rx_s;          // synchronizer
+  logic [CW-1:0] cnt;
+  logic [2:0]    bitn;
+  logic [7:0]    shift;
+
+  always_ff @(posedge clk) begin
+    rx_m <= rx;
+    rx_s <= rx_m;
+  end
+
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      state <= IDLE; valid <= 1'b0; cnt <= '0; bitn <= '0; shift <= '0; data <= '0;
+    end else begin
+      valid <= 1'b0;
+      case (state)
+        IDLE: if (!rx_s) begin state <= START; cnt <= CW'(CLKS_PER_BIT / 2); end
+        START:
+          if (cnt == 0) begin
+            if (rx_s) state <= IDLE;              // glitch, not a real start bit
+            else begin state <= DATA; cnt <= CW'(CLKS_PER_BIT - 1); bitn <= '0; end
+          end else cnt <= cnt - 1'b1;
+        DATA:
+          if (cnt == 0) begin
+            shift <= {rx_s, shift[7:1]};
+            cnt   <= CW'(CLKS_PER_BIT - 1);
+            if (bitn == 3'd7) state <= STOP;
+            bitn  <= bitn + 1'b1;
+          end else cnt <= cnt - 1'b1;
+        STOP:
+          if (cnt == 0) begin
+            state <= IDLE;
+            if (rx_s) begin data <= shift; valid <= 1'b1; end
+          end else cnt <= cnt - 1'b1;
+      endcase
     end
-    always @(posedge clk) begin
-        valid <= 0;
-        framing_error <= 0;
-        if (rst) begin
-            state <= IDLE; ticks <= 0; bit_index <= 0; data <= 0; shift <= 0;
-        end else case (state)
-            IDLE: if (!rx_sync) begin state <= START; ticks <= BIT_TICKS/2-1; end
-            START: if (ticks != 0) ticks <= ticks-1;
-                   else if (rx_sync) state <= IDLE;
-                   else begin state <= DATA; ticks <= BIT_TICKS-1; bit_index <= 0; end
-            DATA: if (ticks != 0) ticks <= ticks-1;
-                  else begin
-                      shift[bit_index] <= rx_sync;
-                      ticks <= BIT_TICKS-1;
-                      if (bit_index == 7) state <= STOP;
-                      else bit_index <= bit_index+1'b1;
-                  end
-            STOP: if (ticks != 0) ticks <= ticks-1;
-                  else if (rx_sync) begin data <= shift; valid <= 1; state <= IDLE; end
-                  else begin framing_error <= 1; state <= BREAK_WAIT; end
-            BREAK_WAIT: if (rx_sync) state <= IDLE;
-            default: state <= IDLE;
-        endcase
-    end
+  end
 endmodule

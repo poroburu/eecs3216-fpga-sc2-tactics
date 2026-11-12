@@ -1,5 +1,16 @@
 # Verification and issue disposition — November 8, 2026
 
+This is the retained November 8 diagnostic/SDK evidence and issue disposition
+from PR #5, not the current game-demo status. See [demo results](results.md) and
+[demo contract](protocol.md) for PR #6. Issues #2–#4 remain open: the two contracts
+are distinct, and the proposed strength/FSM extension still needs a versioned
+interface. No earlier acceptance/sign-off is inferred from integrating the demo.
+
+The diagnostic UART source files now live under `rtl/diagnostic/`; their contents
+are unchanged. Historical source-hash paths describe the tested pre-integration
+layout; the diagnostic QSF and simulation runner select the relocated files.
+No new board, Quartus or game runs are claimed by this integration.
+
 ## Reproduced evidence
 
 - Python 3.12.3: 19 host tests covering committed fixtures, numeric bounds,
@@ -65,7 +76,7 @@ measurement is claimed. Issue #1 can be closed with this explicit disposition.
 
 ### #2 — Packet contract and golden vectors
 
-[Protocol v1](protocol.md) fixes offsets, lengths, checksum coverage, numeric
+[Protocol v1](diagnostic-protocol.md) fixes offsets, lengths, checksum coverage, numeric
 bounds/rounding, tags/indices, IDs, commands/status/cycles, timeout, resync,
 atomic commit, handshake and full-byte duplicate/retry rules. Independent fixture
 bytes are consumed by the Python and RTL tests and physical diagnostic test.

@@ -68,5 +68,5 @@ and host elapsed time as JSONL. This checks the new UART RX/TX, not gameplay.
 Restore the bring-up bitstream and send `UARTon` after testing if preserving the
 previous display is desired.
 
-See [protocol](protocol.md) for deadlines/IDs and [verification](verification.md)
+See [protocol](diagnostic-protocol.md) for deadlines/IDs and [verification](verification.md)
 for measured results and remaining acceptance work.

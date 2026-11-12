@@ -10,18 +10,17 @@ the returned orders. SC2 handles movement, pathing and combat.
 
 ## Status and updated proposal
 
-The working FPGA-in-the-loop implementation is in
-[PR #6](https://github.com/poroburu/eecs3216-fpga-sc2-tactics/pull/6)
-(reviewed at `7ce3b0e924949c3fc2966cbacd9eeae0be07a2f2`). This branch contains the
-updated proposal and the earlier UART diagnostic; it does not include
-the game demo implementation. Use that PR's runbook for executable demo commands.
+The working FPGA-in-the-loop demo is included in this checkout. Start with
+[how it works](docs/how-it-works.md) and the [executable runbook](docs/demo-runbook.md):
+`tools/demo.sh preflight | program | check | watch | compare`.
+[Recorded results](docs/results.md) describe the November 8 baseline; board FOCUS
+comparison evidence remains outstanding.
 
 The project lead reports provisional TA approval of the demo and completed the
 implementation to date. The updated draft preserves the working comparison and
 proposes one extension: a bounded Lanchester-inspired strength guard selecting
 ATTACK/RETREAT/HOLD, with strength bars/state/reason on VGA. The extension and
-Tier A assessment require course approval; no new tactical logic is implemented
-by this draft.
+Tier A assessment require course approval; the strength guard and tactical-state extension remain unimplemented.
 
 - [Updated one-page proposal PDF](docs/proposal/proposal.pdf)
 - [Editable proposal](docs/proposal/proposal.tex)
@@ -29,7 +28,7 @@ by this draft.
 - [CPS feedback architecture](docs/architecture.md)
 - [Schedule and realistic team allocation](docs/implementation-plan.md)
 - [Eight-minute demo presentation](docs/demo.md)
-- [Earlier diagnostic protocol](docs/protocol.md), [bring-up](docs/uart-bringup.md),
+- [Earlier diagnostic protocol](docs/diagnostic-protocol.md), [bring-up](docs/uart-bringup.md),
   [verification](docs/verification.md), and [Linux SDK smoke test](docs/sc2-linux.md)
 - [Risks](docs/risks.md), [references](docs/references.md),
   [contribution workflow](CONTRIBUTING.md)
@@ -55,14 +54,19 @@ end-to-end CPU speedup is assumed.
 
 ## Repository layout
 
-`rtl/`, `sim/`, `host/` and `quartus/` contain the earlier UART diagnostic,
-its independent host/RTL tests and hardware evidence. PR #6 contains the game
-demo, which uses a different wire contract. Do not connect one host to the other
-bitstream. `third_party/s2client-api` pins the optional C++ Linux smoke-test SDK.
-`docs/` contains the updated proposal, architecture, risks and team plan.
+- `rtl/`: demo UART, parser, target pipeline, reply, VGA and top level.
+- `host/sc2fpga/`, `host/sc2_demo.py`: game adapter and independent demo reference.
+- `sim/`: demo system tests and the earlier diagnostic's host/RTL tests.
+- `quartus/sc2fpga/`: demo build; `quartus/uart_diagnostic.qpf`: earlier diagnostic.
+- `rtl/diagnostic/`, `host/protocol.py`, `host/transport.py`: earlier transport
+  contract, separate from the demo. These hosts/bitstreams are incompatible.
+- `third_party/s2client-api`: optional pinned C++ Linux smoke-test SDK.
+- `docs/`: proposal, architecture, runbook, evidence, risks and team plan.
 
-Run `python3 -m unittest discover -s sim -p 'test_*.py' -v` and, with Icarus
-Verilog 12 installed, `python3 sim/run_rtl.py` for the diagnostic. Reusable new
+Run `sim/run_verilator.sh` for the demo. For the earlier diagnostic run
+`python3 -m unittest discover -s sim -p 'test_*.py' -v` and
+`python3 sim/run_rtl.py` with Icarus Verilog 12. The diagnostic still returns
+UNSUPPORTED for tactical requests; it is not the demo controller. Reusable new
 scripts belong in `scripts/`; existing demo `tools/` paths are preserved.
 
 ## Course dates and credits

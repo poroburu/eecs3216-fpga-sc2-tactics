@@ -2,8 +2,8 @@
 
 Updated November 12, 2026. The working implementation is
 [PR #6](https://github.com/poroburu/eecs3216-fpga-sc2-tactics/pull/6) at
-`7ce3b0e924949c3fc2966cbacd9eeae0be07a2f2`; this documentation branch does not
-contain that implementation. The [proposal scope](proposal/scope.md) distinguishes
+`7ce3b0e924949c3fc2966cbacd9eeae0be07a2f2`, now included in this checkout.
+The [proposal scope](proposal/scope.md) distinguishes
 current functions from proposed additions.
 
 ## Adaptation of textbook Figure 1.1
@@ -77,8 +77,11 @@ not the plant or the mechanism that controls the units.
   640×480 VGA, no PLL. Completed display records are held stable between updates;
   swaps are not explicitly restricted to vertical blank.
 - Actual PR #6 inter-byte timeout is **10 ms**, not the old scaffold's 100 ms.
-  Exact frames/pins are in that PR's `docs/protocol.md`; PR #5 has a different
-  contract. Reconcile deliberately before integrating either branch.
+  Exact frames/pins are in [the demo contract](protocol.md). The earlier
+  [diagnostic contract](diagnostic-protocol.md) has a 100 ms timeout and different
+  framing, fields and session semantics. Its UART modules live in `rtl/diagnostic/`;
+  separate build source lists preserve both implementations without mixing them.
+  Neither old contract implements the proposed strength/FSM extension.
 
 The host issues `Attack(target)` only when a target changes or a Marine is idle.
 SC2 can auto-target after a target dies until the next decision (eight loops,

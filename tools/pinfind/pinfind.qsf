@@ -1,0 +1,8 @@
+set_global_assignment -name FAMILY "MAX 10"
+set_global_assignment -name DEVICE 10M50DAF484C7G
+set_global_assignment -name TOP_LEVEL_ENTITY pinfind
+set_global_assignment -name SYSTEMVERILOG_FILE pinfind.sv
+set_global_assignment -name SDC_FILE pinfind.sdc
+set_global_assignment -name NUM_PARALLEL_PROCESSORS 8
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to GPIO[*]
+set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to ARDUINO_IO[*]

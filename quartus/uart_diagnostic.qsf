@@ -2,8 +2,8 @@ set_global_assignment -name FAMILY "MAX 10"
 set_global_assignment -name DEVICE 10M50DAF484C7G
 set_global_assignment -name TOP_LEVEL_ENTITY uart_diagnostic
 set_global_assignment -name SYSTEMVERILOG_FILE uart_diagnostic.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/uart_rx.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/uart_tx.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/diagnostic/uart_rx.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/diagnostic/uart_tx.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/packet_rx.sv
 set_global_assignment -name SYSTEMVERILOG_FILE ../rtl/packet_tx.sv
 set_global_assignment -name SDC_FILE uart_diagnostic.sdc

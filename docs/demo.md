@@ -1,9 +1,8 @@
 # Demo plan: make the decision visible
 
 Updated proposal presentation, November 12, 2026. Target: eight minutes.
-The working demo and executable runbook are in
-[PR #6](https://github.com/poroburu/eecs3216-fpga-sc2-tactics/pull/6)
-(`docs/demo.md`, `tools/demo.sh`). This document scopes the updated presentation;
+The working demo commands are in the [executable runbook](demo-runbook.md)
+and `tools/demo.sh`. This document scopes the updated presentation;
 it is not a claim that the proposed strength/FSM/freeze features already run.
 
 ## Setup and rehearsal checklist

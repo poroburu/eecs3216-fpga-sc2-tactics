@@ -1,26 +1,34 @@
-// Ready/valid byte input, one start + eight LSB-first data + one stop bit.
-module uart_tx #(
-    parameter integer CLOCK_HZ = 50_000_000,
-    parameter integer BAUD = 115_200,
-    parameter integer BIT_TICKS = (CLOCK_HZ + BAUD/2) / BAUD
-) (
-    input wire clk, rst,
-    input wire [7:0] data,
-    input wire valid,
-    output wire ready,
-    output wire tx
+// UART transmitter, 8-N-1, LSB first. Assert `start` for one cycle while `busy` is low.
+module uart_tx #(parameter int CLKS_PER_BIT = 434) (
+  input  logic       clk,
+  input  logic       rst,
+  input  logic       start,
+  input  logic [7:0] data,
+  output logic       tx,
+  output logic       busy
 );
-    reg [9:0] shift;
-    reg [3:0] remaining;
-    integer ticks;
-    assign ready = remaining == 0;
-    assign tx = remaining == 0 ? 1'b1 : shift[0];
-    always @(posedge clk) begin
-        if (rst) begin shift <= 10'h3ff; remaining <= 0; ticks <= 0; end
-        else if (remaining == 0) begin
-            if (valid) begin shift <= {1'b1, data, 1'b0}; remaining <= 10; ticks <= BIT_TICKS-1; end
-        end else if (ticks == 0) begin
-            shift <= {1'b1, shift[9:1]}; remaining <= remaining-1'b1; ticks <= BIT_TICKS-1;
-        end else ticks <= ticks-1;
-    end
+  localparam int CW = $clog2(CLKS_PER_BIT + 1);
+  logic [CW-1:0] cnt;
+  logic [3:0]    bitn;     // 0 = start bit, 1..8 = data, 9 = stop bit
+  logic [9:0]    frame;    // {stop, data[7:0], start}
+
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      tx <= 1'b1; busy <= 1'b0; cnt <= '0; bitn <= '0; frame <= '1;
+    end else if (!busy) begin
+      tx <= 1'b1;
+      if (start) begin
+        frame <= {1'b1, data, 1'b0};
+        busy  <= 1'b1; bitn <= '0; cnt <= '0;
+      end
+    end else if (cnt == 0) begin
+      if (bitn == 4'd10) busy <= 1'b0;       // stop bit has been on the line for a full bit time
+      else begin
+        tx    <= frame[0];
+        frame <= {1'b1, frame[9:1]};
+        cnt   <= CW'(CLKS_PER_BIT - 1);
+        bitn  <= bitn + 1'b1;
+      end
+    end else cnt <= cnt - 1'b1;
+  end
 endmodule

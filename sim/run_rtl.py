@@ -43,7 +43,11 @@ def main():
         runner = shlex.split(os.environ.get("VVP", "vvp"))
         for bench in ("tb_packet", "tb_uart"):
             output = work / bench
-            sources = [ROOT / "sim" / (bench+".sv"), *sorted((ROOT/"rtl").glob("*.sv"))]
+            # Keep the diagnostic UART interface separate from the demo modules.
+            sources = [ROOT / "sim" / (bench+".sv"),
+                       ROOT / "rtl/diagnostic/uart_rx.sv",
+                       ROOT / "rtl/diagnostic/uart_tx.sv",
+                       ROOT / "rtl/packet_rx.sv", ROOT / "rtl/packet_tx.sv"]
             subprocess.run([*compiler,"-g2012","-Wall","-s",bench,"-o",str(output),*map(str,sources)],check=True)
             subprocess.run([*runner,str(output)],cwd=work,check=True,timeout=60)
 
