@@ -1,24 +1,34 @@
-# Current proposal
+# Updated proposal draft
 
 - [One-page PDF](proposal.pdf)
-- [Editable LaTeX source](proposal.tex)
+- [Editable LaTeX](proposal.tex)
+- [Algorithm shortlist, scope and rationale](scope.md)
+- [Architecture adapted from textbook Figure 1.1](../architecture.md)
+- [Standalone architecture visual](architecture.html)
+- [Realistic team allocation](../implementation-plan.md)
+- [Eight-minute demo plan](../demo.md)
 
 Title: **FPGA Tactical Controller for StarCraft II Micro Scenarios**.
-Target: Tier A, subject to instructor approval. Group names and student numbers
-remain placeholders.
+Updated November 12, 2026, using the working Marine/Roach demo in
+[PR #6](https://github.com/poroburu/eecs3216-fpga-sc2-tactics/pull/6).
+The lead reports provisional TA approval of the existing demo. Tier A and the
+proposed Lanchester/retreat extension remain subject to course approval.
+Names/student IDs are placeholders; the lead's completed implementation is
+distinguished from future partner deliverables.
 
-This is the SC2-first proposal, including scholarly references, a schematic VGA
-display, AI Arena micro-map qualification, and MarineMicroBot/Attack-Closest
-comparison. The earlier target-allocation-only proposal is not the current scope.
+This replaces the original AI Arena/MarineMicroBot plan. Required foundation:
+physical CLOSEST/FOCUS toggle, verified target pipeline, live SC2 and VGA.
+Planned extension: a bounded Lanchester-inspired strength guard with explicit
+ATTACK/RETREAT/HOLD behavior. Reservations and kiting are deferred.
 
-Edit the LaTeX source and regenerate the PDF together. Standard LaTeX tools can
-compile it, for example:
+Keep LaTeX and PDF together. Compile with a standard LaTeX distribution:
 
 ```bash
 cd docs/proposal
 pdflatex -interaction=nonstopmode -halt-on-error proposal.tex
 ```
 
-Rerun if LaTeX requests it. A compiler is not bundled. Check the final PDF is
-one page and free of clipped/overflowing content. Add real student numbers to
-the course submission copy according to the team's public-author-credit choice.
+Alternatively, `tectonic --keep-logs docs/proposal/proposal.tex` from the root.
+The draft was built with Tectonic 0.17.0 and checked for one page, overflow and
+visual layout. A compiler is not bundled. Inspect after edits; add names/IDs to
+the course submission copy in accordance with the team's author-credit choice.

@@ -1,82 +1,69 @@
 # FPGA Tactical Controller for StarCraft II Micro Scenarios
 
-EECS 3216 course project targeting the Terasic DE10-Lite FPGA board, Fall 2026.
-Target difficulty: **Tier A, subject to instructor approval**.
+EECS 3216 course project, Fall 2026, Terasic DE10-Lite MAX 10.
+Target: **Tier A, subject to instructor approval**.
 
-The FPGA receives a combat snapshot over UART, evaluates a small squad's strength,
-selects advance/attack/retreat/hold behavior, and allocates attack targets. A PC
-adapter translates observations and commands through the StarCraft II API. SC2
-simulates and renders the game; the FPGA's VGA output is a simple top-down status
-diagram with colored unit markers, target/waypoint highlights, and state text.
+The FPGA chooses attack targets in StarCraft II's **DefeatRoaches** mini-game.
+A physical switch selects nearest-target or weakest-in-range focus fire; VGA
+shows unit markers and target lines. A PC transports observations and applies
+the returned orders. SC2 handles movement, pathing and combat.
 
-## Current status
+## Status and updated proposal
 
-**Planning scaffold only.** No HDL, host adapter, working Quartus project, or
-automated simulation suite has been implemented. Map/client compatibility,
-benchmark behavior, resource utilization, timing, and gameplay benefit are
-unverified. This repository does not run SC2 or program a board yet.
+The working FPGA-in-the-loop implementation is in
+[PR #6](https://github.com/poroburu/eecs3216-fpga-sc2-tactics/pull/6)
+(reviewed at `7ce3b0e924949c3fc2966cbacd9eeae0be07a2f2`). This branch contains the
+updated proposal documents on top of the original scaffold; it does not include
+the PR's implementation. Use that PR's runbook for executable demo commands.
 
-## Start here
+The project lead reports provisional TA approval of the demo and completed the
+implementation to date. The updated draft preserves the working comparison and
+proposes one extension: a bounded Lanchester-inspired strength guard selecting
+ATTACK/RETREAT/HOLD, with strength bars/state/reason on VGA. The extension and
+Tier A assessment require course approval; no new tactical logic is implemented
+by this draft.
 
-- [Current proposal (PDF)](docs/proposal/proposal.pdf)
-- [Editable proposal (LaTeX)](docs/proposal/proposal.tex)
-- [Implementation plan and team responsibilities](docs/implementation-plan.md)
-- [Architecture and draft interface decisions](docs/architecture.md)
-- [Risks and responses](docs/risks.md)
-- [Intended demonstration](docs/demo.md)
-- [Research, SDK, map, and hardware references](docs/references.md)
-- [Contribution workflow](CONTRIBUTING.md)
+- [Updated one-page proposal PDF](docs/proposal/proposal.pdf)
+- [Editable proposal](docs/proposal/proposal.tex)
+- [Algorithm shortlist and scope rationale](docs/proposal/scope.md)
+- [CPS feedback architecture](docs/architecture.md)
+- [Schedule and realistic team allocation](docs/implementation-plan.md)
+- [Eight-minute demo presentation](docs/demo.md)
+- [Risks](docs/risks.md), [references](docs/references.md),
+  [contribution workflow](CONTRIBUTING.md)
 
-## Required scope
+Retained PR evidence distinguishes board CLOSEST results from software FOCUS
+results. Record matched board trials under both switches before claiming a
+reproducible hardware outcome improvement. Core cycle predictability, concurrent
+I/O/video and reference-matching outputs are the hardware demonstration; no
+end-to-end CPU speedup is assumed.
 
-- DE10-Lite MAX 10 `10M50DAF484C7G`, custom SystemVerilog logic.
-- Custom UART RX/TX and framed packet handling, initially 115,200 baud, 8-N-1.
-- On-chip record memory, a four-stage distance/ranking pipeline, strength
-  assessment, tactical FSM, and per-snapshot damage reservations.
-- Capacity of 0–16 friendly and enemy unit records per side; initial SC2 demos
-  use 4–8 Marines against 4–8 Zerglings on open terrain without upgrades/abilities.
-- Advance, attack, retreat, and hold behavior, with authored objective/safety waypoints.
-- Required SC2 integration in single-step mode. Continuous real-time operation
-  is a later experiment, not an initial acceptance requirement.
-- Schematic VGA status output, HEX diagnostics, and board controls.
-- Independent software-reference checks and matched gameplay comparisons.
+## Scope
 
-The initial strength score and retreat cutoffs are engineering hypotheses, not
-validated combat laws. Correct hardware behavior is required; speedup and improved
-win rate must be measured rather than assumed.
+- DE10-Lite `10M50DAF484C7G`, custom SystemVerilog, 50 MHz processing clock.
+- Custom UART RX/TX and parser/reply FSMs, 115200 baud, 8-N-1.
+- Up to 16 records/side; Marine/Roach matchup, fixed integer ranking and ties.
+- Three-stage distance/ranking pipeline, register records and VGA/HEX/LED output.
+- Step-mode evaluation, eight game loops per decision; real-time mode is
+  supplementary. SC2 native auto-targeting may occur between decisions.
+- Versioned protocol/HP/reset/movement additions for the planned strength guard;
+  one safe waypoint, no general path planning. Integration gate November 20.
+- Defer mixed armies, spells, learning, search, reservations, kiting and external
+  bot/map qualification. See the scope note for rationale and acceptance.
 
 ## Repository layout
 
-```text
-rtl/            Planned SystemVerilog modules
-sim/            Planned HDL testbenches and reference-vector exchange
-host/           Planned SC2 adapter and independent software reference
-quartus/        Planned board project, timing constraints, and pin assignments
-scenarios/      Scenario definitions, map qualification, and benchmark setup
-docs/           Proposal, implementation plan, architecture, risks, demo, references
-.github/        Issue and pull-request templates
-```
+`rtl/`, `sim/`, `host/`, `quartus/` and `scenarios/` are component placeholders in
+this checkout; PR #6 contains the demo implementation and its detailed results.
+`docs/` contains the updated scope, architecture, proposal, risks and team plan.
+Reusable new scripts belong in `scripts/`; the PR's existing `tools/` paths are
+referenced as they currently exist.
 
-The component READMEs describe planned work; they are not build instructions for
-an existing implementation. Add actual commands and selected tool versions when
-each component becomes executable.
+## Course dates and credits
 
-## Course milestones
+Proposal: **November 13, 2026, 23:59**. Live demo: **December 2, 16:00–18:50**.
+Final report/code: **December 2, 23:59**. Team names/IDs remain to be filled in.
 
-- Proposal: **November 13, 2026, 23:59**.
-- In-person demonstration: **December 2, 2026, 16:00–18:50**.
-- Final report and code submission: **December 2, 2026, 23:59**.
-
-See the implementation plan for the proposed internal schedule. Team names,
-student numbers, workstream owners, and the first tested map/client versions
-remain to be filled in. Put student numbers in submission copies as appropriate.
-
-## Third-party material and license
-
-The proposed original work is the HDL, adapter integration, reference tests, and
-scenario evaluation. Credit reused algorithms, SDK/example code, maps, and IP
-separately; see [references](docs/references.md). Download game clients, maps, and
-SDK dependencies through their upstream distribution channels.
-
-A license for the team's original code has not been selected. No third-party
-source or game assets are vendored in this scaffold.
+Credit algorithm sources, SDK/library code, map assets and generated IP separately
+from the team's implementation. See [references](docs/references.md). A license
+for original code has not been selected; no game clients/assets are vendored here.
