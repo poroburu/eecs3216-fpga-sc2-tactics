@@ -21,6 +21,11 @@ physical CLOSEST/FOCUS toggle, verified target pipeline, live SC2 and VGA.
 Planned extension: a bounded Lanchester-inspired strength guard with explicit
 ATTACK/RETREAT/HOLD behavior. Reservations and kiting are deferred.
 
+The one-page draft emphasizes the project goal, visible tactical decisions and
+hardware contribution, using short paragraphs and separate role bullets.
+Detailed thresholds, measurement evidence and reproducibility requirements
+remain in [the supporting scope note](scope.md).
+
 Keep LaTeX and PDF together. Compile with a standard LaTeX distribution:
 
 ```bash
