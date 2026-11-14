@@ -1,0 +1,177 @@
+\documentclass[10pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[top=0.4in,bottom=0.35in,left=0.6in,right=0.6in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{multicol}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\usepackage[hidelinks]{hyperref}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small EECS 3216: Digital Systems Engineering}
+\rhead{\small Course Project Proposal}
+\renewcommand{\headrulewidth}{0.4pt}
+\setlength{\headheight}{13pt}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1pt}
+\setlist[itemize]{leftmargin=1.1em,itemsep=0pt,topsep=0.5pt,parsep=0pt}
+\setlist[itemize,2]{leftmargin=1.2em,label=--}
+\titleformat{\section}{\normalsize\bfseries}{\thesection.}{0.4em}{}
+\titlespacing*{\section}{0pt}{2pt}{0pt}
+\titleformat{\subsection}{\small\bfseries}{\thesubsection}{0.4em}{}
+\titlespacing*{\subsection}{0pt}{2pt}{0pt}
+
+% Status tags (defined in the legend under the header).
+\newcommand{\built}{\textsf{\scriptsize[built]}}
+\newcommand{\prop}{\textsf{\scriptsize[proposed]}}
+
+\newcommand{\proposalheader}[4]{%
+\noindent\fbox{\parbox{\dimexpr\textwidth-2\fboxsep-2\fboxrule\relax}{%
+\centering{\large\bfseries #1}\\[2pt]
+\small\textbf{Target Tier:} #2 \hfill
+\textbf{Course:} EECS 3216 (Fall 2026) \hfill
+\textbf{Topic:} #3\\[2pt]
+\raggedright\footnotesize\textbf{Group Members:} #4
+}}\vspace{1pt}}
+
+\begin{document}
+
+\proposalheader
+{FPGA Tactical Controller for StarCraft II Micro Scenarios}
+{Tier A (100\%)}
+{Datapath / Control / VGA}
+{Marlin Lachance (213885025), Vaughn Chan (219846914), Hafsa Manazir (219780428), Vladislav Prasko (220741781)}
+
+{\small
+\built{} working on the board; our group demonstrated it to the TA during scoping.\quad \prop{} new work for the final demonstration.
+}
+
+\section{Overview and Difficulty Justification}
+{\small
+The FPGA commands Marines against waves of Roaches in StarCraft II (SC2); the PC only relays game state and orders.
+\begin{itemize}
+\item \built{} On DeepMind's \emph{DefeatRoaches} mini-game~\cite{pysc2}, the FPGA chooses which Roach each Marine attacks, and VGA draws the units and target lines.
+\item \prop{} In our own variant, the Marines start as two separate squads. Using Lanchester's square law, the FPGA decides when a squad is too weak to fight alone, regroups it with the other squad, and reengages together.
+\end{itemize}
+Tier~A: a custom UART link, pipelined targeting datapath, control FSMs and VGA display run on the board at once.
+
+{\centering
+\begin{tikzpicture}[>=Latex,every node/.style={font=\scriptsize,align=center},
+box/.style={draw,rounded corners,inner sep=2pt,minimum height=0.7cm}]
+\node[box,text width=2.6cm] (plant) {\textbf{Simulated plant}\\SC2 game};
+\node[box,text width=2.6cm,right=1.0cm of plant] (host) {\textbf{Platform 1: PC}\\reads game state,\\applies orders};
+\node[box,text width=2.6cm,right=1.0cm of host] (net) {\textbf{Network fabric}\\USB--UART link};
+\node[box,text width=2.6cm,right=1.0cm of net] (fpga) {\textbf{Platform 2: DE10-Lite}\\makes every decision};
+\node[box,text width=2.6cm,right=1.0cm of fpga] (vga) {\textbf{VGA, HEX, LEDs}\\show controller state};
+\draw[->] ([yshift=5pt]plant.east) -- node[above,font=\tiny]{sensors} ([yshift=5pt]host.west);
+\draw[<-] ([yshift=-5pt]plant.east) -- node[below,font=\tiny]{actuators} ([yshift=-5pt]host.west);
+\draw[->] ([yshift=5pt]host.east) -- node[above,font=\tiny]{state} ([yshift=5pt]net.west);
+\draw[<-] ([yshift=-5pt]host.east) -- node[below,font=\tiny]{orders} ([yshift=-5pt]net.west);
+\draw[<->] (net) -- (fpga);
+\draw[->] (fpga) -- (vga);
+\end{tikzpicture}\par}
+The structure follows Lee and Seshia's cyber-physical system, Fig.~1.1~\cite{lee}, with the SC2 game in place of a physical plant.
+}
+
+\subsection{Regroup and Reengage Using Lanchester's Square Law}\label{sec:lanchester}
+{\small
+Lanchester's square law gives a force of $N$ living units the strength $P = kN^2$~\cite{stanescu}, with $k$ fixed per unit type. Two 5-Marine squads apart total $2\cdot 5^2k = 50k$, but $10^2k = 100k$ together, so the controller avoids being defeated one squad at a time.
+\begin{itemize}
+\item \textbf{Attack:} the squad fights while its own strength is at least the enemy's.
+\item \textbf{Regroup:} when a squad alone is weaker than the enemy, it disengages and moves to the other squad.
+\item \textbf{Reengage:} once together, they attack if combined strength beats the enemy's, else hold back (a margin prevents flicker).
+\item \textbf{Orders:} the board also sends each squad's state and rally point; squads are together within a set distance.
+\item \textbf{Success:} the weak squad arrives with survivors and the combined force wins the wave, vs.\ regrouping off.
+\item \textbf{Fallback:} if regrouping is unreliable by the demo, a weaker squad retreats to its start point instead.
+\end{itemize}
+}
+
+\section{Target Hardware and Peripherals (DE10-Lite Only)}
+{\small
+\begin{itemize}
+\item \textbf{Onboard} (final layout): MAX~10 FPGA (50\,MHz), GPIO header (UART), VGA port; each control is used in a Section~\ref{sec:tests} test:
+  \begin{itemize}
+  \item \textbf{Switches:} SW0 chooses the targeting policy; SW1 turns regrouping on or off for the comparison runs.
+  \item \textbf{Keys:} KEY0 resets squad states and error flags before each run; KEY1 pauses the game (the board holds its reply).
+  \item \textbf{Displays:} HEX3:0 clock cycles per decision; HEX5:4 last error code; LEDR0/LEDR1 packet received/rejected.
+  \end{itemize}
+\item \textbf{External:} 3.3\,V USB-to-UART adapter; VGA monitor; PC running SC2 with our Python bridge.
+\end{itemize}
+}
+
+\section{Combinational and Sequential Logic Architecture}
+{\small
+\begin{itemize}
+\item \textbf{Combinational:}
+  \begin{itemize}
+  \item \built{} Squared Marine--Roach distances, attack-range checks, target-ranking comparators, packet checksum.
+  \item \prop{} Squad strengths $P = kN^2$ (square lookup table and multiplier) and strength comparators.
+  \end{itemize}
+\item \textbf{Sequential:}
+  \begin{itemize}
+  \item \built{} UART FSMs; snapshot registers; ranking pipeline (one Marine--Roach pair per clock); VGA sync counters.
+  \item \prop{} A state machine for each squad that switches it between attacking, regrouping and holding.
+  \end{itemize}
+\end{itemize}
+}
+
+\section{Concrete Specifications and Testable Features}\label{sec:tests}
+{\small
+\begin{itemize}
+\item \textbf{SC2 targeting and tactical decisions}
+  \begin{itemize}
+  \item \built{} SW0=0: nearest Roach. SW0=1: focus fire~\cite{churchill}, the weakest Roach in range, otherwise the nearest.
+  \item \prop{} Each squad attacks, regroups or holds as described in Section~\ref{sec:lanchester}.
+  \item \emph{Test:} decisions match a Python reference model; same-start fights with regrouping on and off (SW1).
+  \end{itemize}
+\item \textbf{VGA visualization of controller state}
+  \begin{itemize}
+  \item \built{} Units, Marine-to-target lines and the current policy.
+  \item \prop{} Strength bars for squad~A, squad~B and both together against the enemy's strength; Marines coloured by squad state.
+  \item \emph{Test:} while paused (KEY1), bars match reported strengths and Marine colours match reported squad states.
+  \end{itemize}
+\item \textbf{UART communication}
+  \begin{itemize}
+  \item \built{} 115200-baud request/reply link with a checksum; bad packets are rejected with an error code.
+  \item \emph{Test:} send a corrupted packet; LEDR1 lights, HEX5:4 show the error code, and the next packet is processed without a reset.
+  \end{itemize}
+\item \textbf{Originality:} HDL by the group, with Claude (Anthropic) as coding assistant and commit co-author; bridge: \texttt{burnysc2}~\cite{burnysc2}; map~\cite{pysc2}.
+\end{itemize}
+}
+
+\section{Verification Plan and Team Task Allocation}
+{\small
+\setlength{\multicolsep}{1pt}
+\begin{multicols}{2}\raggedright
+\begin{itemize}
+\item \textbf{Marlin Lachance (lead):} existing design, architecture, squad state machines, SC2 integration.
+\item \textbf{Vaughn Chan (hardware):} board setup, UART and VGA testing, strength and state display.
+\item \textbf{Hafsa Manazir (documentation):} report, references, results.
+\item \textbf{Vladislav Prasko (demonstration):} two-squad scenario, integration testing, presentation.
+\end{itemize}
+\end{multicols}
+We will also report Quartus timing and resource use and the clock cycles per decision (HEX3:0).
+}
+
+\vspace{-3pt}
+{\scriptsize
+\renewcommand{\section}[2]{}% no "References" heading: keep the proposal to one page
+\begin{thebibliography}{5}
+\setlength{\itemsep}{-2pt}
+\bibitem{pysc2} O. Vinyals et al., ``StarCraft II: A New Challenge for Reinforcement Learning,'' arXiv:1708.04782, 2017.
+\bibitem{lee} E. A. Lee and S. A. Seshia, \textit{Introduction to Embedded Systems: A Cyber-Physical Systems Approach}, 2nd ed., MIT Press, 2017, Fig.~1.1.
+\bibitem{churchill} D. Churchill and M. Buro, ``Portfolio Greedy Search and Simulation for Large-Scale Combat in StarCraft,'' \textit{IEEE CIG}, 2013.
+\bibitem{stanescu} M. Stanescu, N. Barriga and M. Buro, ``Using Lanchester Attrition Laws for Combat Prediction in StarCraft,'' \textit{AIIDE}, 2015.
+\bibitem{burnysc2} BurnySc2, \texttt{python-sc2} (PyPI package \texttt{burnysc2}, v7.3.0), \url{https://github.com/BurnySc2/python-sc2}.
+\end{thebibliography}
+}
+
+\end{document}
