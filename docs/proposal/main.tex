@@ -82,7 +82,12 @@ The structure follows Lee and Seshia's cyber-physical system, Fig.~1.1~\cite{lee
 \section{Target Hardware and Peripherals (DE10-Lite Only)}
 {\small
 \begin{itemize}
-\item \textbf{Onboard:} MAX~10 FPGA with 50\,MHz clock; GPIO header (UART); VGA port; SW0 (targeting policy); SW4:1 (inspect a Marine); KEY0 (reset); HEX5:0; LEDR9:0.
+\item \textbf{Onboard:} MAX~10 FPGA (50\,MHz), GPIO header (UART link), VGA port, and these controls, each used in a Section~5 test:
+  \begin{itemize}
+  \item \textbf{Switches:} SW0 chooses the targeting policy; SW1 turns regrouping on or off for the comparison runs.
+  \item \textbf{Keys:} KEY0 resets squad states and error flags before each run; KEY1 freezes the current game state for inspection.
+  \item \textbf{Displays:} HEX3:0 clock cycles per decision; HEX5:4 last error code; LEDR0/LEDR1 packet received/rejected.
+  \end{itemize}
 \item \textbf{External:} 3.3\,V USB-to-UART adapter; VGA monitor; PC running SC2 with our Python bridge.
 \end{itemize}
 }
@@ -98,19 +103,19 @@ The structure follows Lee and Seshia's cyber-physical system, Fig.~1.1~\cite{lee
 \item \textbf{Sequential:}
   \begin{itemize}
   \item \built{} UART FSMs; snapshot registers; ranking pipeline (one Marine--Roach pair per clock); VGA sync counters.
-  \item \prop{} One squad FSM per squad (ATTACK, REGROUP, HOLD).
+  \item \prop{} A state machine for each squad that switches it between attacking, regrouping and holding.
   \end{itemize}
 \end{itemize}
 }
 
 \section{Proposed Extension: Lanchester Regroup-and-Reengage}
 {\small
-When every unit can fire, Lanchester's square law gives a force strength $P = kN^2$~\cite{stanescu}, where $N$ is the number of living units and $k$ is a fixed value per unit type. Two squads of 5 Marines fighting apart total $2\cdot 5^2k = 50k$; together they have $10^2k = 100k$. The controller uses this to avoid being defeated one squad at a time.
+Lanchester's square law gives a force of $N$ living units the strength $P = kN^2$~\cite{stanescu}, with $k$ fixed per unit type. Two 5-Marine squads apart total $2\cdot 5^2k = 50k$, but $10^2k = 100k$ together, so the controller avoids being defeated one squad at a time.
 \begin{itemize}
-\item \textbf{ATTACK:} the squad fights while its own strength is at least the enemy's.
-\item \textbf{REGROUP:} when a squad alone is weaker than the enemy, it disengages and moves to the other squad.
-\item \textbf{Reengage:} once together, the squads attack if their combined strength beats the enemy's, otherwise HOLD; a small margin prevents rapid switching.
-\item \textbf{Successful regroup:} the weaker squad reaches the other with survivors and the combined force wins the wave, compared with regrouping turned off.
+\item \textbf{Attack:} the squad fights while its own strength is at least the enemy's.
+\item \textbf{Regroup:} when a squad alone is weaker than the enemy, it disengages and moves to the other squad.
+\item \textbf{Reengage:} once together, the squads attack if their combined strength beats the enemy's, otherwise they hold back; a small margin prevents rapid switching.
+\item \textbf{Success:} the weak squad arrives with survivors and the combined force wins the wave, vs.\ regrouping off.
 \end{itemize}
 }
 
@@ -120,19 +125,19 @@ When every unit can fire, Lanchester's square law gives a force strength $P = kN
 \item \textbf{SC2 targeting and tactical decisions}
   \begin{itemize}
   \item \built{} SW0=0: nearest Roach. SW0=1: focus fire~\cite{churchill}, the weakest Roach in range, otherwise the nearest.
-  \item \prop{} Squad states ATTACK, REGROUP and HOLD, from Section~4.
-  \item \emph{Test:} the board's decisions match a Python reference model on recorded game states; regroup on vs.\ off from the same start.
+  \item \prop{} Each squad attacks, regroups or holds as described in Section~4.
+  \item \emph{Test:} decisions match a Python reference model; same-start fights with regrouping on and off (SW1).
   \end{itemize}
 \item \textbf{VGA visualization of controller state}
   \begin{itemize}
   \item \built{} Units, Marine-to-target lines and the current policy.
-  \item \prop{} Border colour shows the stronger side (blue: Marines, red: Roaches); Marines coloured by squad state.
-  \item \emph{Test:} on a paused game state, lines and colours match the decisions the board sent back.
+  \item \prop{} Strength bars for squad~A, squad~B and both together, drawn against a line at the enemy's strength; each Marine is coloured by its squad's state (attack, regroup, hold).
+  \item \emph{Test:} on a frozen state (KEY1), bars match reported strengths; colours change only when a bar crosses the line.
   \end{itemize}
 \item \textbf{UART communication}
   \begin{itemize}
-  \item \built{} 115200-baud request/reply link with a checksum; a bad packet is rejected and its error code is shown on HEX.
-  \item \emph{Test:} send a corrupted packet; the board rejects it and processes the next one without a reset.
+  \item \built{} 115200-baud request/reply link with a checksum; bad packets are rejected with an error code.
+  \item \emph{Test:} send a corrupted packet; LEDR1 lights, HEX5:4 show the error code, and the next packet is processed without a reset.
   \end{itemize}
 \item \textbf{Originality:} all HDL is written by the group. The PC bridge uses the \texttt{burnysc2} library; DeepMind's map is credited.
 \end{itemize}
@@ -149,7 +154,7 @@ When every unit can fire, Lanchester's square law gives a force strength $P = kN
 \item \textbf{Vladislav Prasko (demonstration):} two-squad scenario, integration testing, presentation.
 \end{itemize}
 \end{multicols}
-We will also report Quartus timing and resource use and the clock cycles per decision.
+We will also report Quartus timing and resource use and the clock cycles per decision (HEX3:0).
 }
 
 \vspace{-3pt}
