@@ -26,6 +26,8 @@
 \setlist[itemize,2]{leftmargin=1.2em,label=--}
 \titleformat{\section}{\normalsize\bfseries}{\thesection.}{0.4em}{}
 \titlespacing*{\section}{0pt}{2pt}{0pt}
+\titleformat{\subsection}{\small\bfseries}{\thesubsection}{0.4em}{}
+\titlespacing*{\subsection}{0pt}{2pt}{0pt}
 
 % Status tags (defined in the legend under the header).
 \newcommand{\built}{\textsf{\scriptsize[built]}}
@@ -79,10 +81,23 @@ box/.style={draw,rounded corners,inner sep=2pt,minimum height=0.7cm}]
 The structure follows Lee and Seshia's cyber-physical system, Fig.~1.1~\cite{lee}, with the SC2 game in place of a physical plant.
 }
 
+\subsection{Regroup and Reengage Using Lanchester's Square Law}\label{sec:lanchester}
+{\small
+Lanchester's square law gives a force of $N$ living units the strength $P = kN^2$~\cite{stanescu}, with $k$ fixed per unit type. Two 5-Marine squads apart total $2\cdot 5^2k = 50k$, but $10^2k = 100k$ together, so the controller avoids being defeated one squad at a time.
+\begin{itemize}
+\item \textbf{Attack:} the squad fights while its own strength is at least the enemy's.
+\item \textbf{Regroup:} when a squad alone is weaker than the enemy, it disengages and moves to the other squad.
+\item \textbf{Reengage:} once together, they attack if combined strength beats the enemy's, else hold back (a margin prevents flicker).
+\item \textbf{Orders:} the board also sends each squad's state and rally point; squads are together within a set distance.
+\item \textbf{Success:} the weak squad arrives with survivors and the combined force wins the wave, vs.\ regrouping off.
+\item \textbf{Fallback:} if regrouping is unreliable by the demo, a weaker squad retreats to its start point instead.
+\end{itemize}
+}
+
 \section{Target Hardware and Peripherals (DE10-Lite Only)}
 {\small
 \begin{itemize}
-\item \textbf{Onboard} (final layout): MAX~10 FPGA (50\,MHz), GPIO header (UART), VGA port; each control is used in a Section~5 test:
+\item \textbf{Onboard} (final layout): MAX~10 FPGA (50\,MHz), GPIO header (UART), VGA port; each control is used in a Section~\ref{sec:tests} test:
   \begin{itemize}
   \item \textbf{Switches:} SW0 chooses the targeting policy; SW1 turns regrouping on or off for the comparison runs.
   \item \textbf{Keys:} KEY0 resets squad states and error flags before each run; KEY1 pauses the game (the board holds its reply).
@@ -108,26 +123,13 @@ The structure follows Lee and Seshia's cyber-physical system, Fig.~1.1~\cite{lee
 \end{itemize}
 }
 
-\section{Proposed Extension: Lanchester Regroup-and-Reengage}
-{\small
-Lanchester's square law gives a force of $N$ living units the strength $P = kN^2$~\cite{stanescu}, with $k$ fixed per unit type. Two 5-Marine squads apart total $2\cdot 5^2k = 50k$, but $10^2k = 100k$ together, so the controller avoids being defeated one squad at a time.
-\begin{itemize}
-\item \textbf{Attack:} the squad fights while its own strength is at least the enemy's.
-\item \textbf{Regroup:} when a squad alone is weaker than the enemy, it disengages and moves to the other squad.
-\item \textbf{Reengage:} once together, they attack if combined strength beats the enemy's, else hold back (a margin prevents flicker).
-\item \textbf{Orders:} the board also sends each squad's state and rally point; squads are together within a set distance.
-\item \textbf{Success:} the weak squad arrives with survivors and the combined force wins the wave, vs.\ regrouping off.
-\item \textbf{Fallback:} if regrouping is unreliable by the demo, a weaker squad retreats to its start point instead.
-\end{itemize}
-}
-
-\section{Concrete Specifications and Testable Features}
+\section{Concrete Specifications and Testable Features}\label{sec:tests}
 {\small
 \begin{itemize}
 \item \textbf{SC2 targeting and tactical decisions}
   \begin{itemize}
   \item \built{} SW0=0: nearest Roach. SW0=1: focus fire~\cite{churchill}, the weakest Roach in range, otherwise the nearest.
-  \item \prop{} Each squad attacks, regroups or holds as described in Section~4.
+  \item \prop{} Each squad attacks, regroups or holds as described in Section~\ref{sec:lanchester}.
   \item \emph{Test:} decisions match a Python reference model; same-start fights with regrouping on and off (SW1).
   \end{itemize}
 \item \textbf{VGA visualization of controller state}
