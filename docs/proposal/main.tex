@@ -3,7 +3,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{lmodern}
-\usepackage[top=0.45in,bottom=0.4in,left=0.6in,right=0.6in]{geometry}
+\usepackage[top=0.4in,bottom=0.35in,left=0.6in,right=0.6in]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{enumitem}
 \usepackage{fancyhdr}
@@ -21,11 +21,11 @@
 \setlength{\headheight}{13pt}
 
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{1.5pt}
+\setlength{\parskip}{1pt}
 \setlist[itemize]{leftmargin=1.1em,itemsep=0pt,topsep=0.5pt,parsep=0pt}
 \setlist[itemize,2]{leftmargin=1.2em,label=--}
 \titleformat{\section}{\normalsize\bfseries}{\thesection.}{0.4em}{}
-\titlespacing*{\section}{0pt}{3pt}{0.5pt}
+\titlespacing*{\section}{0pt}{2pt}{0pt}
 
 % Status tags (defined in the legend under the header).
 \newcommand{\built}{\textsf{\scriptsize[built]}}
@@ -49,7 +49,7 @@
 {Marlin Lachance (213885025), Vaughn Chan (219846914), Hafsa Manazir (219780428), Vladislav Prasko (220741781)}
 
 {\small
-\built{} working on the board; shown to the TA during scoping to justify this proposal.\quad \prop{} new work for the final demonstration.
+\built{} working on the board; our group demonstrated it to the TA during scoping.\quad \prop{} new work for the final demonstration.
 }
 
 \section{Overview and Difficulty Justification}
@@ -82,10 +82,10 @@ The structure follows Lee and Seshia's cyber-physical system, Fig.~1.1~\cite{lee
 \section{Target Hardware and Peripherals (DE10-Lite Only)}
 {\small
 \begin{itemize}
-\item \textbf{Onboard:} MAX~10 FPGA (50\,MHz), GPIO header (UART link), VGA port, and these controls, each used in a Section~5 test:
+\item \textbf{Onboard} (final layout): MAX~10 FPGA (50\,MHz), GPIO header (UART), VGA port; each control is used in a Section~5 test:
   \begin{itemize}
   \item \textbf{Switches:} SW0 chooses the targeting policy; SW1 turns regrouping on or off for the comparison runs.
-  \item \textbf{Keys:} KEY0 resets squad states and error flags before each run; KEY1 freezes the current game state for inspection.
+  \item \textbf{Keys:} KEY0 resets squad states and error flags before each run; KEY1 pauses the game (the board holds its reply).
   \item \textbf{Displays:} HEX3:0 clock cycles per decision; HEX5:4 last error code; LEDR0/LEDR1 packet received/rejected.
   \end{itemize}
 \item \textbf{External:} 3.3\,V USB-to-UART adapter; VGA monitor; PC running SC2 with our Python bridge.
@@ -114,8 +114,10 @@ Lanchester's square law gives a force of $N$ living units the strength $P = kN^2
 \begin{itemize}
 \item \textbf{Attack:} the squad fights while its own strength is at least the enemy's.
 \item \textbf{Regroup:} when a squad alone is weaker than the enemy, it disengages and moves to the other squad.
-\item \textbf{Reengage:} once together, the squads attack if their combined strength beats the enemy's, otherwise they hold back; a small margin prevents rapid switching.
+\item \textbf{Reengage:} once together, they attack if combined strength beats the enemy's, else hold back (a margin prevents flicker).
+\item \textbf{Orders:} the board also sends each squad's state and rally point; squads are together within a set distance.
 \item \textbf{Success:} the weak squad arrives with survivors and the combined force wins the wave, vs.\ regrouping off.
+\item \textbf{Fallback:} if regrouping is unreliable by the demo, a weaker squad retreats to its start point instead.
 \end{itemize}
 }
 
@@ -131,15 +133,15 @@ Lanchester's square law gives a force of $N$ living units the strength $P = kN^2
 \item \textbf{VGA visualization of controller state}
   \begin{itemize}
   \item \built{} Units, Marine-to-target lines and the current policy.
-  \item \prop{} Strength bars for squad~A, squad~B and both together, drawn against a line at the enemy's strength; each Marine is coloured by its squad's state (attack, regroup, hold).
-  \item \emph{Test:} on a frozen state (KEY1), bars match reported strengths; colours change only when a bar crosses the line.
+  \item \prop{} Strength bars for squad~A, squad~B and both together against the enemy's strength; Marines coloured by squad state.
+  \item \emph{Test:} while paused (KEY1), bars match reported strengths and Marine colours match reported squad states.
   \end{itemize}
 \item \textbf{UART communication}
   \begin{itemize}
   \item \built{} 115200-baud request/reply link with a checksum; bad packets are rejected with an error code.
   \item \emph{Test:} send a corrupted packet; LEDR1 lights, HEX5:4 show the error code, and the next packet is processed without a reset.
   \end{itemize}
-\item \textbf{Originality:} all HDL is written by the group. The PC bridge uses the \texttt{burnysc2} library; DeepMind's map is credited.
+\item \textbf{Originality:} HDL by the group, with Claude (Anthropic) as coding assistant and commit co-author; bridge: \texttt{burnysc2}~\cite{burnysc2}; map~\cite{pysc2}.
 \end{itemize}
 }
 
@@ -148,7 +150,7 @@ Lanchester's square law gives a force of $N$ living units the strength $P = kN^2
 \setlength{\multicolsep}{1pt}
 \begin{multicols}{2}\raggedright
 \begin{itemize}
-\item \textbf{Marlin Lachance (lead):} existing design, architecture, squad FSM, SC2 integration.
+\item \textbf{Marlin Lachance (lead):} existing design, architecture, squad state machines, SC2 integration.
 \item \textbf{Vaughn Chan (hardware):} board setup, UART and VGA testing, strength and state display.
 \item \textbf{Hafsa Manazir (documentation):} report, references, results.
 \item \textbf{Vladislav Prasko (demonstration):} two-squad scenario, integration testing, presentation.
@@ -160,12 +162,13 @@ We will also report Quartus timing and resource use and the clock cycles per dec
 \vspace{-3pt}
 {\scriptsize
 \renewcommand{\section}[2]{}% no "References" heading: keep the proposal to one page
-\begin{thebibliography}{4}
+\begin{thebibliography}{5}
 \setlength{\itemsep}{-2pt}
 \bibitem{pysc2} O. Vinyals et al., ``StarCraft II: A New Challenge for Reinforcement Learning,'' arXiv:1708.04782, 2017.
 \bibitem{lee} E. A. Lee and S. A. Seshia, \textit{Introduction to Embedded Systems: A Cyber-Physical Systems Approach}, 2nd ed., MIT Press, 2017, Fig.~1.1.
 \bibitem{churchill} D. Churchill and M. Buro, ``Portfolio Greedy Search and Simulation for Large-Scale Combat in StarCraft,'' \textit{IEEE CIG}, 2013.
 \bibitem{stanescu} M. Stanescu, N. Barriga and M. Buro, ``Using Lanchester Attrition Laws for Combat Prediction in StarCraft,'' \textit{AIIDE}, 2015.
+\bibitem{burnysc2} BurnySc2, \texttt{python-sc2} (PyPI package \texttt{burnysc2}, v7.3.0), \url{https://github.com/BurnySc2/python-sc2}.
 \end{thebibliography}
 }
 
