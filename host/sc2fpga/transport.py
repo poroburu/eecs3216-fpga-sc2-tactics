@@ -88,21 +88,23 @@ class PySerial(Transport):
 
 
 class Model(Transport):
-    """Software stand-in for the board (policy = SW0, regroup = SW1)."""
-    def __init__(self, policy: int = 1, regroup_en: int = 1):
+    """Software stand-in for the board (policy = SW0, regroup = SW1, cautious = SW3, reckless = SW4)."""
+    def __init__(self, policy: int = 1, regroup_en: int = 1, cautious: int = 0, reckless: int = 0):
         self.policy = policy
         self.regroup_en = regroup_en
+        self.cautious, self.reckless = cautious, reckless
         self.lc = LanchesterState()
 
     def transact(self, request: bytes) -> bytes:
-        rep = reply_for_bytes(request, self.policy, self.regroup_en, self.lc)
+        rep = reply_for_bytes(request, self.policy, self.regroup_en, self.lc, self.cautious, self.reckless)
         assert rep is not None
         return encode_reply(rep)
 
 
-def open_transport(spec: str, policy: int = 1, regroup_en: int = 1, timeout: float = 0.5) -> Transport:
+def open_transport(spec: str, policy: int = 1, regroup_en: int = 1, timeout: float = 0.5,
+                   cautious: int = 0, reckless: int = 0) -> Transport:
     if spec == "model":
-        return Model(policy, regroup_en)
+        return Model(policy, regroup_en, cautious, reckless)
     if spec.startswith("win:"):
         return PowerShellBridge(spec[4:], int(timeout * 1000))
     return PySerial(spec, timeout=timeout)

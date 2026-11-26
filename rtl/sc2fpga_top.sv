@@ -2,17 +2,24 @@
 //
 //   GPIO[0] <- USB-UART adapter TX (FPGA RX)      GPIO[1] -> adapter RX (FPGA TX)
 //   SW0     policy: 0 = CLOSEST, 1 = FOCUS
-//   SW1     regrouping: 0 = OFF (force ATTACK), 1 = ON (Lanchester square-law FSM)
+//   SW1     Lanchester guard: 0 = OFF (force ATTACK), 1 = ON (square-law ATTACK/REGROUP/FALLBACK FSM)
+//   SW2     KEY unit: 0 = Marines, 1 = Roaches
+//   SW3     cautious thresholds: attack only at 2x enemy strength (falls back too readily)
+//   SW4     reckless thresholds: attack at 0.5x enemy strength (SW3 wins if both are on)
+//   SW8     pause: latches VGA/HEX on the latest decision and holds the UART reply while on
 //   SW9     HEX mode: 0 = proposal view (HEX5:4 status, HEX3:0 cycles), 1 = debug view
-//   KEY0    reset (active low): resets squad states and sticky error flags
-//   KEY1    pause (active low): latches VGA/HEX on latest decision and holds UART reply until released
+//   KEY0    add one unit of the SW2 type (on release; reported to the host in the next V2 reply)
+//   KEY1    remove one unit of the SW2 type
+//   KEY0+1  held together ~1 s: reset (squad states, pending edits, sticky error flags)
 //   LEDR0   packet received OK    LEDR1 packet rejected (sticky)    LEDR2 overrun (sticky)
 //   LEDR3   SW0 (FOCUS)           LEDR4 SW1 (regroup)               LEDR5 squads together
 //   LEDR7:6 Squad A state         LEDR9:8 Squad B state
 import sc2fpga_pkg::*;
 module sc2fpga_top #(
                      parameter int CLKS_PER_BIT = 434,      // 115200 baud at 50 MHz
-                     parameter int TIMEOUT_CLKS = 500_000   // 10 ms inter-byte timeout
+                     parameter int TIMEOUT_CLKS = 500_000,  // 10 ms inter-byte timeout
+                     parameter int DEBOUNCE_CLKS = 1_000_000,    // 20 ms key debounce
+                     parameter int RESET_HOLD_CLKS = 50_000_000  // 1 s both-keys reset
                      ) (
                         input  logic       MAX10_CLK1_50,
                         input  logic [1:0] KEY,
@@ -25,12 +32,19 @@ module sc2fpga_top #(
                         );
    logic clk; assign clk = MAX10_CLK1_50;
 
-   // ---------------- reset and switch synchronizers ----------------
+   // ---------------- power-on reset, switch synchronizers, keys ----------------
+   logic [4:0] por_cnt = '0; logic por;
+   always_ff @(posedge clk) if (por_cnt != '1) por_cnt <= por_cnt + 5'd1;
+   assign por = (por_cnt != '1);
+   logic [9:0] sw_m, sw_s;
+   always_ff @(posedge clk) begin sw_m <= SW; sw_s <= sw_m; end
+
+   logic key_rst, ev_new, ev_new_op;
+   key_ctrl #(.DEBOUNCE_CLKS(DEBOUNCE_CLKS), .RESET_HOLD_CLKS(RESET_HOLD_CLKS)) u_keys (
+                .clk, .rst(por), .key_n(KEY), .reset_req(key_rst), .ev(ev_new), .ev_op(ev_new_op));
    logic [2:0] rst_sync; logic rst;
-   always_ff @(posedge clk) rst_sync <= {rst_sync[1:0], ~KEY[0]};
-   assign rst = rst_sync[2];
-   logic [9:0] sw_m, sw_s; logic [1:0] key1_s;
-   always_ff @(posedge clk) begin sw_m <= SW; sw_s <= sw_m; key1_s <= {key1_s[0], ~KEY[1]}; end
+   always_ff @(posedge clk) rst_sync <= {rst_sync[1:0], por | key_rst};
+   assign rst = rst_sync[2] | por;
 
    // ---------------- UART ----------------
    logic [7:0] rx_data; logic rx_valid;
@@ -68,11 +82,13 @@ module sc2fpga_top #(
    logic [11:0] lc_pa, lc_pb, lc_pab, lc_pe;
    logic [CW-1:0] lc_rax, lc_ray, lc_rbx, lc_rby;
    logic          lc_tog, lc_done;
+   logic [11:0] lc_pt; logic lc_la, lc_lb;
    lanchester_ctrl u_lc (
-                         .clk, .rst, .eval(req_ok), .regroup_en(sw_s[1]),
-                         .n_f, .n_e, .f_x, .f_y, .f_squad,
-                         .state_a(lc_sta), .state_b(lc_stb),
-                         .p_a(lc_pa), .p_b(lc_pb), .p_ab(lc_pab), .p_e(lc_pe),
+                         .clk, .rst, .eval(req_ok & is_v2 & (ctrl == C_IDLE)), .regroup_en(sw_s[1]),
+                         .cautious(sw_s[3]), .reckless(sw_s[4]),
+                         .n_f, .n_e, .f_x, .f_y, .e_x, .e_y, .f_squad,
+                         .state_a(lc_sta), .state_b(lc_stb), .last_a(lc_la), .last_b(lc_lb),
+                         .p_a(lc_pa), .p_b(lc_pb), .p_ab(lc_pab), .p_e(lc_pe), .p_t(lc_pt),
                          .rally_ax(lc_rax), .rally_ay(lc_ray), .rally_bx(lc_rbx), .rally_by(lc_rby),
                          .together(lc_tog), .done(lc_done));
 
@@ -82,7 +98,9 @@ module sc2fpga_top #(
    logic [7:0] r_snap, r_status; logic [4:0] r_n;
    frame_tx u_ftx (
                    .clk, .rst, .start(ftx_start), .is_v2(r_v2),
-                   .snap(r_snap), .status(r_status), .policy(ts_policy), .regroup_en(ts_regroup), .n(r_n),
+                   .snap(r_snap), .status(r_status), .n(r_n),
+                   .flags_lo({ts_reck, ts_caut, ts_regroup, ts_policy}),
+                   .flags_hi({lc_lb, lc_la, r_evo, r_evu}), .ev_cnt(r_evc),
                    .target, .state_a(lc_sta), .state_b(lc_stb), .together(lc_tog),
                    .rally_ax(lc_rax), .rally_ay(lc_ray), .rally_bx(lc_rbx), .rally_by(lc_rby),
                    .p_a(lc_pa), .p_b(lc_pb), .p_ab(lc_pab), .p_e(lc_pe),
@@ -101,9 +119,16 @@ module sc2fpga_top #(
    logic [CW-1:0]        d_rax, d_ray, d_rbx, d_rby;
    logic                 ok_sticky, err_sticky, ovr_sticky;
    logic                 ts_fin, lc_fin;
+   logic                 ts_caut, ts_reck;
+   logic [11:0]          d_pt;
+   logic                 d_la, d_lb, d_caut, d_reck;
+   // pending KEY edits: one kind at a time, count saturates at 7; handed to the next V2 OK reply
+   logic [2:0] ev_cnt, r_evc; logic ev_unit, ev_op, r_evu, r_evo;
+   logic       ev_take;
 
    logic                 done_all;
    assign done_all = (ts_fin | ts_done) && (!ts_v2 || lc_fin | lc_done);
+   assign ev_take = (ctrl == C_COMPUTE) && done_all && ts_v2;
 
    always_ff @(posedge clk) begin
       if (rst) begin
@@ -115,15 +140,27 @@ module sc2fpga_top #(
          d_pa <= 0; d_pb <= 0; d_pab <= 0; d_pe <= 0;
          d_rax <= '0; d_ray <= '0; d_rbx <= '0; d_rby <= '0;
          ok_sticky <= 0; err_sticky <= 0; ovr_sticky <= 0;
+         ts_caut <= 0; ts_reck <= 0; d_pt <= 0; d_la <= 0; d_lb <= 0; d_caut <= 0; d_reck <= 0;
+         ev_cnt <= 0; ev_unit <= 0; ev_op <= 0; r_evc <= 0; r_evu <= 0; r_evo <= 0;
       end else begin
          ftx_start <= 0;
+         if (ev_take) begin
+            r_evc <= ev_cnt; r_evu <= ev_unit; r_evo <= ev_op;
+            ev_cnt <= ev_new ? 3'd1 : 3'd0;
+            if (ev_new) begin ev_unit <= sw_s[2]; ev_op <= ev_new_op; end
+         end else if (ev_new) begin
+            if (ev_cnt == 0) begin ev_cnt <= 3'd1; ev_unit <= sw_s[2]; ev_op <= ev_new_op; end
+            else if (ev_unit == sw_s[2] && ev_op == ev_new_op && ev_cnt != 3'd7) ev_cnt <= ev_cnt + 3'd1;
+         end
          case (ctrl)
            C_IDLE:
              if (req_ok) begin
                 ctrl <= C_COMPUTE; ts_policy <= sw_s[0]; ts_regroup <= sw_s[1]; ts_v2 <= is_v2;
+                ts_caut <= sw_s[3]; ts_reck <= sw_s[4] & ~sw_s[3];
                 ts_fin <= 0; lc_fin <= 0;
              end else if (req_err) begin
                 ctrl <= C_ERROR; ftx_start <= 1; r_v2 <= err_v2; r_snap <= err_snap; r_status <= err_code; r_n <= 0;
+                ts_policy <= sw_s[0]; ts_regroup <= sw_s[1]; ts_caut <= sw_s[3]; ts_reck <= sw_s[4] & ~sw_s[3];
                 d_err <= 1; d_status <= err_code; err_sticky <= 1;
              end
            C_COMPUTE: begin
@@ -134,18 +171,19 @@ module sc2fpga_top #(
                  d_nf <= n_f; d_ne <= n_e; d_pol <= ts_policy; d_regroup <= ts_regroup; d_v2 <= ts_v2;
                  d_err <= 0; d_snap <= snap; d_status <= ST_OK; d_cyc <= cycles; d_fsquad <= f_squad;
                  d_sta <= lc_sta; d_stb <= lc_stb; d_tog <= lc_tog;
-                 d_pa <= lc_pa; d_pb <= lc_pb; d_pab <= lc_pab; d_pe <= lc_pe;
+                 d_pa <= lc_pa; d_pb <= lc_pb; d_pab <= lc_pab; d_pe <= lc_pe; d_pt <= lc_pt;
+                 d_la <= lc_la; d_lb <= lc_lb; d_caut <= ts_caut; d_reck <= ts_reck;
                  d_rax <= lc_rax; d_ray <= lc_ray; d_rbx <= lc_rbx; d_rby <= lc_rby;
                  ok_sticky <= 1;
                  for (int k = 0; k < MAX_UNITS; k++) begin
                     d_fx[k] <= f_x[k]; d_fy[k] <= f_y[k]; d_ex[k] <= e_x[k]; d_ey[k] <= e_y[k]; d_tgt[k] <= target[k];
                  end
-                 if (key1_s[1]) ctrl <= C_PAUSE;
+                 if (sw_s[8]) ctrl <= C_PAUSE;
                  else begin ctrl <= C_REPLY; ftx_start <= 1; end
               end
            end
            C_PAUSE:
-             if (!key1_s[1]) begin ctrl <= C_REPLY; ftx_start <= 1; end
+             if (!sw_s[8]) begin ctrl <= C_REPLY; ftx_start <= 1; end
            default:
              if (ftx_done) ctrl <= C_IDLE;
          endcase
@@ -192,7 +230,8 @@ module sc2fpga_top #(
                     .n_f(d_nf), .n_e(d_ne), .f_x(d_fx), .f_y(d_fy), .e_x(d_ex), .e_y(d_ey), .f_squad(d_fsquad),
                     .target(d_tgt), .policy(d_pol), .error(d_err),
                     .v2_mode(d_v2), .regroup_en(d_regroup), .state_a(d_sta), .state_b(d_stb),
-                    .p_a(d_pa), .p_b(d_pb), .p_ab(d_pab), .p_e(d_pe),
+                    .p_a(d_pa), .p_b(d_pb), .p_ab(d_pab), .p_e(d_pe), .p_t(d_pt),
+                    .last_a(d_la), .last_b(d_lb), .cautious(d_caut), .reckless(d_reck), .key_roach(sw_s[2]),
                     .rally_ax(d_rax), .rally_ay(d_ray), .rally_bx(d_rbx), .rally_by(d_rby),
                     .r(VGA_R), .g(VGA_G), .b(VGA_B), .hsync_n(VGA_HS), .vsync_n(VGA_VS));
 endmodule

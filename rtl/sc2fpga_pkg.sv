@@ -14,7 +14,7 @@ package sc2fpga_pkg;
   // Per-squad tactical states
   localparam logic [1:0] SQ_ATTACK   = 2'd0;
   localparam logic [1:0] SQ_REGROUP  = 2'd1;
-  localparam logic [1:0] SQ_HOLD     = 2'd2;
+  localparam logic [1:0] SQ_FALLBACK = 2'd2;   // retreat away from the enemy centroid
 
   // Reply status codes
   localparam logic [7:0] ST_OK           = 8'd0;

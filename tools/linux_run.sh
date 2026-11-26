@@ -129,7 +129,8 @@ do_run() {
   fi
   do_flash
   echo "==> Launching live two-squad SC2 on $dev"
-  echo "    Switches: SW0=FOCUS/CLOSEST | SW1=Lanchester ON/OFF | KEY0=Reset | KEY1=Hold to Pause"
+  echo "    Switches: SW0 FOCUS/CLOSEST | SW1 Lanchester | SW2 KEY unit (Marine/Roach) | SW3 cautious | SW4 reckless | SW8 pause
+    Keys:     KEY0 add unit | KEY1 remove unit | hold both ~1 s = reset"
   "$PY" host/sc2_demo.py \
     --port "$dev" \
     --two-squads \

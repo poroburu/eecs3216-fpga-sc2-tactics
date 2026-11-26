@@ -3,8 +3,11 @@
 // V1 Reply: 5A | snap | status | policy | n | n x target | cycles_hi | cycles_lo | chk
 // V2 Reply: 5B | snap | status | flags  | n | n x target | meta | rally_a(4) | rally_b(4)
 //              | p_a(2) | p_b(2) | p_ab(2) | p_e(2) | cycles(2) | chk
-//   flags = {6'd0, regroup_en, policy}
-//   meta  = {3'd0, together, state_b[1:0], state_a[1:0]}
+//   flags = {last_b, last_a, ev_op, ev_unit, reckless, cautious, regroup_en, policy}
+//           (bits 7:4 only in OK replies; error replies send 4'd0 there)
+//   meta  = {ev_cnt[2:0], together, state_b[1:0], state_a[1:0]}
+//   ev_*  : pending KEY0/KEY1 unit edits since the last V2 OK reply
+//           (ev_unit 0 = Marine, 1 = Roach; ev_op 0 = add, 1 = remove; ev_cnt 0 = none, 1..7)
 import sc2fpga_pkg::*;
 module frame_tx (
   input  logic          clk,
@@ -12,8 +15,9 @@ module frame_tx (
   input  logic          start,
   input  logic          is_v2,
   input  logic [7:0]    snap, status,
-  input  logic          policy,
-  input  logic          regroup_en,
+  input  logic [3:0]    flags_lo,      // {reckless, cautious, regroup_en, policy}
+  input  logic [3:0]    flags_hi,      // {last_b, last_a, ev_op, ev_unit}
+  input  logic [2:0]    ev_cnt,
   input  logic [4:0]    n,
   input  logic [7:0]    target [MAX_UNITS],
   input  logic [1:0]    state_a, state_b,
@@ -88,11 +92,11 @@ module frame_tx (
       if (state == T_IDLE) begin
         if (start) begin
           r_v2 <= is_v2; r_snap <= snap; r_status <= status;
-          r_flags <= is_v2 ? {6'd0, regroup_en, policy} : {7'd0, policy};
+          r_flags <= is_v2 ? {(status == ST_OK) ? flags_hi : 4'd0, flags_lo} : {7'd0, flags_lo[0]};
           r_n <= n; r_cyc <= cycles;
           for (int q = 0; q < MAX_UNITS; q++) r_tgt[q] <= target[q];
           if (is_v2 && status == ST_OK) begin
-            r_meta <= {3'd0, together, state_b, state_a};
+            r_meta <= {ev_cnt, together, state_b, state_a};
             r_rax <= rally_ax; r_ray <= rally_ay; r_rbx <= rally_bx; r_rby <= rally_by;
             r_pa <= p_a; r_pb <= p_b; r_pab <= p_ab; r_pe <= p_e;
           end else begin

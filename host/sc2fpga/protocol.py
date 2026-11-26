@@ -8,6 +8,12 @@ V2 Request : A6 | snap | nF | nE | reach2_hi | reach2_lo | nF x {x_hi,x_lo,y_hi,
                 | nE x {x_hi,x_lo,y_hi,y_lo,hp} | chk
 V2 Reply   : 5B | snap | status | flags  | n | n x target | meta | rally_a(4) | rally_b(4)
                 | p_a(2) | p_b(2) | p_ab(2) | p_e(2) | cycles(2) | chk
+  flags = {last_b, last_a, ev_op, ev_unit, reckless, cautious, regroup_en, policy}
+          (bits 7:4 are 0 in error replies)
+  meta  = {ev_cnt[2:0], together, state_b[1:0], state_a[1:0]}
+  ev_*  = KEY edits since the previous V2 OK reply: ev_unit 0 Marine / 1 Roach,
+          ev_op 0 add / 1 remove, ev_cnt 0 = none, else 1..7 presses
+  rally = REGROUP: other squad's centroid; FALLBACK: retreat point
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
@@ -18,8 +24,10 @@ MAX_UNITS = 16
 COORD_MAX = 2047          # unsigned Q7.4: 1/16 map unit
 NO_TARGET = 0xFF
 CLOSEST, FOCUS = 0, 1
-SQ_ATTACK, SQ_REGROUP, SQ_HOLD = 0, 1, 2
-STATE_NAME = {0: "ATTACK", 1: "REGROUP", 2: "HOLD"}
+SQ_ATTACK, SQ_REGROUP, SQ_FALLBACK = 0, 1, 2
+STATE_NAME = {0: "ATTACK", 1: "REGROUP", 2: "FALLBACK"}
+UNIT_MARINE, UNIT_ROACH = 0, 1
+OP_ADD, OP_REMOVE = 0, 1
 STATUS = {0: "OK", 1: "BAD_CHECKSUM", 2: "BAD_COUNT", 3: "TIMEOUT", 4: "BAD_RANGE"}
 OK, BAD_CHECKSUM, BAD_COUNT, TIMEOUT, BAD_RANGE = range(5)
 
@@ -56,6 +64,13 @@ class Reply:
     p_b: int = 0
     p_ab: int = 0
     p_e: int = 0
+    cautious: int = 0
+    reckless: int = 0
+    last_a: bool = False
+    last_b: bool = False
+    ev_unit: int = UNIT_MARINE
+    ev_op: int = OP_ADD
+    ev_cnt: int = 0
 
     @property
     def ok(self) -> bool:
@@ -87,9 +102,10 @@ def encode_reply(r: Reply) -> bytes:
         body = bytes([r.snap & 0xFF, r.status, r.policy & 1, len(r.targets), *r.targets,
                       r.cycles >> 8, r.cycles & 0xFF])
         return bytes([RSP_SYNC]) + body + bytes([checksum(body)])
-    flags = ((r.regroup_en & 1) << 1) | (r.policy & 1)
+    flags = ((r.reckless & 1) << 3) | ((r.cautious & 1) << 2) | ((r.regroup_en & 1) << 1) | (r.policy & 1)
     if r.status == OK:
-        meta = ((1 if r.together else 0) << 4) | ((r.state_b & 3) << 2) | (r.state_a & 3)
+        flags |= (int(r.last_b) << 7) | (int(r.last_a) << 6) | ((r.ev_op & 1) << 5) | ((r.ev_unit & 1) << 4)
+        meta = ((r.ev_cnt & 7) << 5) | ((1 if r.together else 0) << 4) | ((r.state_b & 3) << 2) | (r.state_a & 3)
         ext = bytes([
             meta,
             r.rally_a[0] >> 8, r.rally_a[0] & 0xFF, r.rally_a[1] >> 8, r.rally_a[1] & 0xFF,
@@ -129,7 +145,9 @@ def decode_reply(b: bytes) -> Reply:
     return Reply(
         snap=b[1], status=b[2], policy=b[3] & 1, targets=targets,
         cycles=(b[o + 17] << 8) | b[o + 18],
-        is_v2=True, regroup_en=(b[3] >> 1) & 1,
+        is_v2=True, regroup_en=(b[3] >> 1) & 1, cautious=(b[3] >> 2) & 1, reckless=(b[3] >> 3) & 1,
+        ev_unit=(b[3] >> 4) & 1, ev_op=(b[3] >> 5) & 1, last_a=bool((b[3] >> 6) & 1), last_b=bool(b[3] >> 7),
+        ev_cnt=(meta >> 5) & 7,
         state_a=meta & 3, state_b=(meta >> 2) & 3, together=bool((meta >> 4) & 1),
         rally_a=(u16(1), u16(3)), rally_b=(u16(5), u16(7)),
         p_a=u16(9), p_b=u16(11), p_ab=u16(13), p_e=u16(15),

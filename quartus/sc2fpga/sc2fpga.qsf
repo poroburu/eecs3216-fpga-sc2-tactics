@@ -20,3 +20,4 @@ set_global_assignment -name RESERVE_ALL_UNUSED_PINS_WEAK_PULLUP "AS INPUT TRI-ST
 
 set_global_assignment -name LAST_QUARTUS_VERSION "25.1std.0 Lite Edition"
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/lanchester_ctrl.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/key_ctrl.sv
