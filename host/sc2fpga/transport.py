@@ -1,15 +1,12 @@
-"""Ways for the host to reach a target-selection engine.
-
-  win:COM5      Windows COM port through host/bridge/com_bridge.ps1 (for WSL; no usbipd needed)
-  /dev/ttyUSB0  native serial port via pyserial (Linux, or WSL after `usbipd attach`)
-  COM5          native serial port via pyserial on Windows
-  model         the Python reference pretending to be the FPGA (no hardware)
-"""
+"""Ways for the host to reach the FPGA target-selection & Lanchester controller."""
 from __future__ import annotations
 import subprocess, time
 from pathlib import Path
-from .protocol import Reply, decode_reply, encode_reply, reply_length, RSP_SYNC, Snapshot, encode_request
-from .reference import expected_reply
+from .protocol import (
+    Reply, decode_reply, encode_reply, reply_length,
+    RSP_SYNC, RSP_SYNC_V2, Snapshot, encode_request,
+)
+from .reference import LanchesterState, reply_for_bytes
 
 
 class LinkError(RuntimeError):
@@ -72,12 +69,14 @@ class PySerial(Transport):
             b = self.s.read(1)
             if not b:
                 raise LinkError("timeout waiting for reply")
-            if b[0] == RSP_SYNC:
+            if b[0] in (RSP_SYNC, RSP_SYNC_V2):
                 break
+        v2 = (b[0] == RSP_SYNC_V2)
         head = self.s.read(4)
-        rest = self.s.read(head[3] + 3) if len(head) == 4 else b""
+        extra = 20 if v2 else 3
+        rest = self.s.read(head[3] + extra) if len(head) == 4 else b""
         raw = b + head + rest
-        if len(head) != 4 or len(raw) != reply_length(head[3]):
+        if len(head) != 4 or len(raw) != reply_length(head[3], v2):
             raise LinkError(f"short reply {raw.hex()}")
         return raw
 
@@ -89,18 +88,21 @@ class PySerial(Transport):
 
 
 class Model(Transport):
-    """Software stand-in for the board (policy fixed at construction, like SW0)."""
-    def __init__(self, policy: int = 1):
+    """Software stand-in for the board (policy = SW0, regroup = SW1)."""
+    def __init__(self, policy: int = 1, regroup_en: int = 1):
         self.policy = policy
+        self.regroup_en = regroup_en
+        self.lc = LanchesterState()
 
     def transact(self, request: bytes) -> bytes:
-        from .reference import reply_for_bytes
-        return encode_reply(reply_for_bytes(request, self.policy))
+        rep = reply_for_bytes(request, self.policy, self.regroup_en, self.lc)
+        assert rep is not None
+        return encode_reply(rep)
 
 
-def open_transport(spec: str, policy: int = 1) -> Transport:
+def open_transport(spec: str, policy: int = 1, regroup_en: int = 1, timeout: float = 0.5) -> Transport:
     if spec == "model":
-        return Model(policy)
+        return Model(policy, regroup_en)
     if spec.startswith("win:"):
-        return PowerShellBridge(spec[4:])
-    return PySerial(spec)
+        return PowerShellBridge(spec[4:], int(timeout * 1000))
+    return PySerial(spec, timeout=timeout)

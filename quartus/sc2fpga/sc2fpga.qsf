@@ -17,3 +17,6 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/vga_render.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/sc2fpga_top.sv
 set_global_assignment -name SDC_FILE sc2fpga.sdc
 set_global_assignment -name RESERVE_ALL_UNUSED_PINS_WEAK_PULLUP "AS INPUT TRI-STATED WITH WEAK PULL-UP"
+
+set_global_assignment -name LAST_QUARTUS_VERSION "25.1std.0 Lite Edition"
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/lanchester_ctrl.sv
