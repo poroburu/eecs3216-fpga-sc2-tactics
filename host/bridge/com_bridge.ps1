@@ -23,13 +23,14 @@ while ($true) {
     $ok = $false
     while ($true) {                                  # hunt for the reply sync byte
       $b = ReadByteOrNull; if ($null -eq $b) { break }
-      if ($b -eq 0x5A) { $got.Add([byte]$b); break }
+      if ($b -eq 0x5A -or $b -eq 0x5B) { $got.Add([byte]$b); break }   # V1 / V2 (two-squad) reply
     }
     if ($got.Count -eq 1) {
       $need = 4                                      # snap, status, policy, n
       for ($i = 0; $i -lt $need; $i++) { $b = ReadByteOrNull; if ($null -eq $b) { break }; $got.Add([byte]$b) }
       if ($got.Count -eq 5) {
-        $rest = $got[4] + 3                          # targets + cycles(2) + chk
+        $extra = 3; if ($got[0] -eq 0x5B) { $extra = 20 }   # V1: cycles(2)+chk; V2: adds Lanchester block
+        $rest = $got[4] + $extra                     # targets + extra
         for ($i = 0; $i -lt $rest; $i++) { $b = ReadByteOrNull; if ($null -eq $b) { break }; $got.Add([byte]$b) }
         $ok = ($got.Count -eq 5 + $rest)
       }
