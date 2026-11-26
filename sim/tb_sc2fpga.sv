@@ -6,11 +6,14 @@
 // policy echo, the cycle count, and the checksum are all checked.
 //
 // Select the vector file with +VEC=<file.mem> (default directed.mem).
-// Vector words (12-bit hex): 4pp set SW0 | 1bb request byte | 2bb expected byte | 300 run | FFF end
+// Vector words (12-bit hex): 4pp set SW7:0 | 1bb request byte | 2bb expected byte | 300 run |
+//   6kk tap KEYs in kk (bit0 KEY0, bit1 KEY1) | 7kk hold KEYs past the reset time | FFF end
 `timescale 1ns/1ps
 module tb_sc2fpga;
   localparam int CPB = 8;            // fast UART for simulation (8 clocks per bit)
   localparam int TIMEOUT = 3000;     // parser inter-byte timeout in clocks (> 1 byte time)
+  localparam int DEB = 4;            // key debounce (clocks)
+  localparam int HOLD = 400;         // both-keys reset hold (clocks)
   string VEC = "directed.mem";
 
   logic clk = 0; always #10 clk = ~clk;   // 50 MHz
@@ -21,7 +24,7 @@ module tb_sc2fpga;
   assign gpio[0] = rx_line;
   logic [9:0] ledr; logic [7:0] h0, h1, h2, h3, h4, h5; logic [3:0] vr, vg, vb; logic hs, vs;
 
-  sc2fpga_top #(.CLKS_PER_BIT(CPB), .TIMEOUT_CLKS(TIMEOUT)) dut (
+  sc2fpga_top #(.CLKS_PER_BIT(CPB), .TIMEOUT_CLKS(TIMEOUT), .DEBOUNCE_CLKS(DEB), .RESET_HOLD_CLKS(HOLD)) dut (
     .MAX10_CLK1_50(clk), .KEY(key), .SW(sw), .LEDR(ledr),
     .HEX0(h0), .HEX1(h1), .HEX2(h2), .HEX3(h3), .HEX4(h4), .HEX5(h5),
     .VGA_R(vr), .VGA_G(vg), .VGA_B(vb), .VGA_HS(hs), .VGA_VS(vs), .GPIO(gpio));
@@ -70,7 +73,7 @@ module tb_sc2fpga;
     else begin
       fail++;
       if (fail <= 10) begin
-        $write("FAIL case %0d (SW0=%0d)\n  expected:", ncase, sw[0]); foreach (exp_q[i]) $write(" %02x", exp_q[i]);
+        $write("FAIL case %0d (SW=%02x)\n  expected:", ncase, sw[7:0]); foreach (exp_q[i]) $write(" %02x", exp_q[i]);
         $write("\n  got:     "); foreach (got[i]) $write(" %02x", got[i]); $write("\n");
       end
     end
@@ -87,10 +90,12 @@ module tb_sc2fpga;
     if (vec_file == 0) $fatal(1, "Cannot open vector file %s", VEC);
     $fclose(vec_file);
     $readmemh(VEC, vec);
-    key[0] = 0; repeat (20) @(posedge clk); key[0] = 1; repeat (20) @(posedge clk);
+    repeat (64) @(posedge clk);                      // power-on reset
     for (int a = 0; vec[a] !== 12'hFFF && vec[a] !== 12'hxxx; a++) begin
       case (vec[a][11:8])
-        4'h4: begin sw[0] = vec[a][0]; repeat (8) @(posedge clk); end
+        4'h4: begin sw[7:0] = vec[a][7:0]; repeat (8) @(posedge clk); end
+        4'h6: begin key = ~vec[a][1:0]; repeat (4 * DEB + 8) @(posedge clk); key = 2'b11; repeat (4 * DEB + 8) @(posedge clk); end
+        4'h7: begin key = ~vec[a][1:0]; repeat (HOLD + 4 * DEB + 8) @(posedge clk); key = 2'b11; repeat (64) @(posedge clk); end
         4'h1: req.push_back(vec[a][7:0]);
         4'h2: exp_q.push_back(vec[a][7:0]);
         4'h3: begin run_case(); req.delete(); exp_q.delete(); end

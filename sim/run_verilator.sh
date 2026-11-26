@@ -5,7 +5,7 @@
 set -euo pipefail
 root=$(realpath "$(dirname "$0")/..")
 cd "$root"
-RTL="rtl/sc2fpga_pkg.sv rtl/uart_rx.sv rtl/uart_tx.sv rtl/frame_rx.sv rtl/target_select.sv rtl/frame_tx.sv rtl/hex7seg.sv rtl/vga_timing.sv rtl/vga_render.sv rtl/sc2fpga_top.sv"
+RTL="rtl/sc2fpga_pkg.sv rtl/uart_rx.sv rtl/uart_tx.sv rtl/frame_rx.sv rtl/target_select.sv rtl/lanchester_ctrl.sv rtl/key_ctrl.sv rtl/frame_tx.sv rtl/hex7seg.sv rtl/vga_timing.sv rtl/vga_render.sv rtl/sc2fpga_top.sv"
 mkdir -p sim/build
 verilator --binary --timing -j 8 -Wall -Wno-fatal -Wno-DECLFILENAME -Wno-UNUSEDSIGNAL -Wno-UNUSEDPARAM \
   --top-module tb_sc2fpga -Mdir sim/build/obj $RTL sim/tb_sc2fpga.sv -o tb > sim/build/verilator.log 2>&1 \
